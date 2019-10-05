@@ -3,7 +3,10 @@
 /////////////////////////////////////////////////
 // setup
 
-require('./util.js').use(); require('./coord.js').use()
+import { board_size, idx2coord_translator_pair, idx2move, move2idx, uv2coord_translator_pair } from "./coord"
+import { graph_overlay_canvas } from "./renderer"
+import { around_idx_diff, clip, Coordinate, each_key_value, empty, flatten, identity, last, merge, num_sort, seq, to_i, to_s, truep, xor } from "./util"
+
 
 // color constant
 const BLACK = "#000", WHITE = "#fff"
@@ -24,21 +27,22 @@ const EXPECTED_COLOR = 'rgba(0,0,255,0.3)', UNEXPECTED_COLOR = 'rgba(255,0,0,0.8
 const GOBAN_BG_COLOR = {"": "#f9ca91", p: "#a38360", t: "#f7e3cd", pt: "#a09588"}
 
 // state
-let R = {}, target_move = null
-function set_state(given_R) {R = given_R}  // fixme: ugly
+let R: any = {}
+export let target_move = null
+export function set_state(given_R) {R = given_R}  // fixme: ugly
 
 // util
-function f2s(z, digits) {return truep(z) ? z.toFixed(truep(digits) ? digits : 1) : ''}
+function f2s(z: number, digits?: number) {return truep(z) ? z.toFixed(truep(digits) ? digits : 1) : ''}
 
 /////////////////////////////////////////////////
 // various gobans
 
-function draw_raw_goban(canvas, options) {
+export function draw_raw_goban(canvas, options) {
     const u = options.show_until
     u ? draw_goban_until(canvas, u, options) : draw_goban(canvas, null, options)
 }
 
-function draw_main_goban(canvas, options) {
+export function draw_main_goban(canvas, options) {
     const opts = {draw_visits_p: true, read_only: R.attached, ...options}
     const u = options.show_until, h = options.selected_suggest
     target_move = !u && (h.visits > 0) && h.move
@@ -122,13 +126,13 @@ function draw_goban_with_variation(canvas, suggest, opts) {
                 mapping_to_winrate_bar, ...opts})
 }
 
-function draw_goban_with_principal_variation(canvas, options) {
+export function draw_goban_with_principal_variation(canvas, options) {
     const opts = {read_only: true, force_draw_expected_p: true,
                   mapping_to_winrate_bar: false, ...options}
     draw_goban_with_variation(canvas, R.suggest[0] || {}, opts)
 }
 
-function draw_endstate_goban(canvas, options) {
+export function draw_endstate_goban(canvas, options) {
     const past_p = past_endstate_p(options.draw_endstate_value_p)
     const scores = winrate_history_values_of('score_without_komi')
     const past_score = scores[R.move_count - R.endstate_diff_interval]
@@ -240,7 +244,7 @@ function draw_on_board(stones, drawp, unit, idx2coord, g) {
         const past_p = past_endstate_p(draw_endstate_value_p)
         draw_endstate_stones(each_coord, past_p, stone_radius, g); return
     }
-    each_coord((h, xy, idx) => {
+    each_coord((h, xy, idx: Coordinate) => {
         draw_endstate_p && draw_endstate(h.endstate, xy, stone_radius, g)
         h.stone ? draw_stone(h, xy, stone_radius, draw_last_p, draw_recent_p, g) :
             h.suggest ? draw_suggest(h, xy, stone_radius, large_font_p, g) : null
@@ -265,7 +269,7 @@ function draw_endstate_stones(each_coord, past_p, stone_radius, g) {
     })
 }
 
-function goban_bg(border) {
+function goban_bg(border?): string {
     return GOBAN_BG_COLOR[(R.pausing ? 'p' : '') + (R.trial && border ? 't' : '')]
 }
 
@@ -482,7 +486,10 @@ function draw_mapping_tics(unit, canvas, g) {
     if (truep(boundary)) {
         const [[b0, b1], [m0, m1], [w0, w1]] =
               [0, boundary, 100].map(wr => mapping_line_coords(wr, unit, canvas))
-        draw(...(R.bturn ? [BLACK, b0, m1] : [WHITE, m0, w1]))
+        if (R.bturn)
+            draw(BLACK, b0, m1);
+        else
+            draw(WHITE, m0, w1)
     }
     // tics
     seq(9, 1).forEach(k => {
@@ -493,7 +500,7 @@ function draw_mapping_tics(unit, canvas, g) {
     })
 }
 
-function mapping_text(suggest) {
+function mapping_text(suggest, ...opts) {
     const [winrate_text, visits_text, prior_text, score_text, score_stdev_text]
           = suggest_texts(suggest) || []
     const v = visits_text ? ` (${visits_text})` : ''
@@ -515,7 +522,7 @@ function mapping_line_coords(b_winrate, unit, canvas) {
 
 let winrate_bar_prev = 50
 
-function draw_winrate_bar(canvas, large_bar, pale_text_p) {
+export function draw_winrate_bar(canvas, large_bar, pale_text_p) {
     const w = canvas.width, h = canvas.height, g = canvas.getContext("2d")
     const score_p = score_bar_p(), tics = score_p ? 19 : 9
     const xfor = percent => w * percent / 100
@@ -543,7 +550,7 @@ function draw_winrate_bar(canvas, large_bar, pale_text_p) {
 function draw_winrate_bar_text(prev_score, w, h, pale_text_p, g) {
     const b_wr = b_winrate(); if (!truep(b_wr)) {return}
     const scorep = score_bar_p()
-    const eval = scorep ? - (R.score_without_komi - prev_score) * (R.bturn ? 1 : -1)
+    const eval_ = scorep ? - (R.score_without_komi - prev_score) * (R.bturn ? 1 : -1)
           : last_move_eval()
     const visits = R.max_visits && kilo_str(R.max_visits)
     const fontsize = Math.min(h * 0.5, w * 0.04)
@@ -552,12 +559,12 @@ function draw_winrate_bar_text(prev_score, w, h, pale_text_p, g) {
           [GREEN, WINRATE_TRAIL_COLOR]
     g.save()
     set_font(fontsize, g); g.textBaseline = 'middle'
-    const write = (text, x, y_rel) => g.fillText(text, x, fontsize * (y_rel || 0.5))
+    const write = (text: string, x: number, y_rel?: number) => g.fillText(text, x, fontsize * (y_rel || 0.5))
     const score_str = wr => (wr % 10 === 0) ? wr : ''
     const f = (wr_text, x, align, myturn) => {
         const cond = (pred, s) => (pred ? ` ${s} ` : '')
         const vis = cond(visits, visits)
-        const ev = cond(truep(eval), `(${eval > 0 ? '+' : ''}${f2s(eval)})`)
+        const ev = cond(truep(eval_), `(${eval_ > 0 ? '+' : ''}${f2s(eval_)})`)
         const win = cond(true, wr_text)
         g.textAlign = align; g.fillStyle = wr_color; write(win, x)
         myturn && (g.fillStyle = vis_color); write(myturn ? vis : ev, x, 1.5)
@@ -605,8 +612,8 @@ function draw_winrate_bar_tics(b_wr, tics, vline, g) {
 }
 
 function draw_winrate_bar_last_move_eval(b_wr, prev_score, h, xfor, vline, g) {
-    const eval = last_move_eval(), b_eval = last_move_b_eval(), dummy = 0
-    if (!truep(eval)) {return}
+    const eval_ = last_move_eval(), b_eval = last_move_b_eval(), dummy = 0
+    if (!truep(eval_)) {return}
     const prev_b_wr = score_bar_p() ?
           fake_winrate_for(dummy, prev_score, true) : (b_wr - b_eval)
     const [x1, x2] = [b_wr, prev_b_wr].map(xfor).sort()
@@ -660,7 +667,7 @@ function draw_winrate_bar_fan(s, w, h, stroke, fill, aura_color,
 }
 
 function draw_with_aura(proc,
-                        s, h, [x, y, r, max_radius, x_puct, y_puct, x_lcb],
+                        s, h, [x, y, r, max_radius, x_puct, y_puct, x_lcb]: number[],
                         aura_color, force_puct_p, g) {
     if (!aura_color) {proc(); return}
     const searched = winrate_trail_searched(s), rel_dy = (y - y_puct) / h
@@ -716,7 +723,7 @@ function winrate_bar_suggest_prop(s) {
             target_p, draw_order_p, next_p, winrate}
 }
 
-function suggest_color(suggest, alpha) {
+function suggest_color(suggest, alpha?) {
     const hue = winrate_color_hue(suggest.winrate, suggest.score_without_komi)
     const alpha_emphasis = emph => {
         const max_alpha = 0.5, visits_ratio = suggest.visits / (R.visits + 1)
@@ -756,7 +763,7 @@ function winrate_bar_order_set_style(s, fontsize, g) {
 
 // calc
 
-function winrate_bar_xy(suggest, w, h, supplementary, bturn) {
+function winrate_bar_xy(suggest, w, h, supplementary?: boolean, bturn?) {
     const real_wr = suggest.winrate, max_radius = winrate_bar_max_radius(w, h)
     const wr = fake_winrate(suggest, bturn)
     const x_for = winrate => w * flip_maybe(winrate, bturn) / 100
@@ -821,7 +828,7 @@ const score_bar_fitter = make_center_fitter(5)
 
 // convert score to "winrate of corresponding position on winrate bar"
 // to cheat drawing functions in score_bar mode
-function fake_winrate(suggest, bturn) {
+function fake_winrate(suggest, bturn?) {
     return fake_winrate_for(suggest.winrate, suggest.score_without_komi, bturn)
 }
 function fake_winrate_for(winrate, score_without_komi, bturn) {
@@ -835,7 +842,7 @@ function fake_winrate_for(winrate, score_without_komi, bturn) {
 /////////////////////////////////////////////////
 // winrate graph
 
-function draw_winrate_graph(canvas, show_until, handle_mouse_on_winrate_graph) {
+export function draw_winrate_graph(canvas, show_until, handle_mouse_on_winrate_graph) {
     const w = canvas.width, h = canvas.height, g = canvas.getContext("2d")
     const tics = 9, xmargin = w * 0.02, fontsize = to_i(w * 0.04)
     const smax = Math.max(R.history_length, 1)
@@ -980,7 +987,7 @@ const winrate_trail_max_suggestions = 10
 const winrate_trail_limit_relative_visits = 0.3
 let winrate_trail = {}, winrate_trail_move_count = 0, winrate_trail_visits = 0
 
-function update_winrate_trail() {
+export function update_winrate_trail() {
     const total_visits_increase = R.visits - winrate_trail_visits;
     // check visits for detecting restart of leelaz
     (winrate_trail_move_count !== R.move_count ||
@@ -1041,7 +1048,7 @@ function winrate_trail_searched(suggest) {
 /////////////////////////////////////////////////
 // visits trail
 
-function draw_visits_trail(canvas) {
+export function draw_visits_trail(canvas) {
     const w = canvas.width, h = canvas.height, g = canvas.getContext("2d")
     const fontsize = h / 10, top_margin = 3
     const v2x = v => v / R.visits * w
@@ -1098,7 +1105,7 @@ function draw_visits_trail_order(s, a, forcep, fontsize, h, xy_for, g) {
 /////////////////////////////////////////////////
 // graphics
 
-function clear_canvas(canvas, bg_color, g) {
+export function clear_canvas(canvas: HTMLCanvasElement, bg_color?: string, g?: CanvasRenderingContext2D) {
     canvas.style.background = bg_color || TRANSPARENT;
     (g || canvas.getContext("2d")).clearRect(0, 0, canvas.width, canvas.height)
 }
@@ -1180,11 +1187,12 @@ function merge_stone_at(move, stone_array, stone) {
     const [i, j] = move2idx(move); (i >= 0) && merge_stone(stone_array[i][j], stone)
 }
 
-function is_next_move(move) {
-    [i, j] = move2idx(move); return (i >= 0) && R.stones[i][j].next_move
+export function is_next_move(move) {
+    let [i, j] = move2idx(move);
+    return (i >= 0) && R.stones[i][j].next_move
 }
 
-function latest_move(moves, show_until) {
+export function latest_move(moves, show_until) {
     if (!moves) {return false}
     const n = moves.findIndex(z => (z.move_count > show_until))
     return n >= 0 ? moves[n - 1] : last(moves)
@@ -1201,14 +1209,14 @@ function suggest_texts(suggest) {
          score, score_stdev]
 }
 
-function b_winrate(nth_prev) {return winrate_history_ref('r', nth_prev)}
+function b_winrate(nth_prev?: number) {return winrate_history_ref('r', nth_prev)}
 function last_move_b_eval() {return winrate_history_ref('move_b_eval')}
 function last_move_eval() {return winrate_history_ref('move_eval')}
-function winrate_history_ref(key, nth_prev) {
+function winrate_history_ref(key, nth_prev?: number) {
     return (R.winrate_history[R.move_count - (nth_prev || 0)] || {})[key]
 }
 
-function flip_maybe(x, bturn) {
+function flip_maybe(x: number, bturn?: boolean) {
     return (bturn === undefined ? R.bturn : bturn) ? x : 100 - x
 }
 
@@ -1243,15 +1251,4 @@ function kilo_str_sub(x, rules) {
     // +0.1 for "1.0K" instead of "1K"
     const y = (x + 0.1) / base, z = Math.floor(y)
     return (y < 10 ? to_s(y).slice(0, 3) : to_s(z)) + unit
-}
-
-//////////////////////////////////
-
-module.exports = {
-    set_state,
-    draw_raw_goban, draw_main_goban, draw_goban_with_principal_variation,
-    draw_endstate_goban,
-    draw_winrate_graph, draw_winrate_bar, draw_visits_trail,
-    update_winrate_trail, clear_canvas, is_next_move, latest_move,
-    target_move: () => target_move,
 }

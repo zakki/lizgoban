@@ -5,7 +5,11 @@
 // npx electron src -j '{"leelaz_args": ["-g", "-w", "/foo/bar/network.gz"]}'
 // npx electron src -j /foo/bar/config.json
 
-require('./util.js').use(); require('./coord.js').use()
+import { move2idx } from "./coord"
+// modules
+import { create_game, create_game_from_sgf } from "./game"
+import * as P from "./powered_goban"
+import { aa2hash, aa_ref, aa_set, clip, debug_log, do_nothing, each_key_value, each_line, empty, flatten, mac_p, merge, seq, set_error_handler, to_s, truep, xor } from "./util"
 const PATH = require('path'), fs = require('fs')
 const default_path_for = name => PATH.join(__dirname, '..', 'external', name)
 
@@ -60,9 +64,6 @@ function update_debug_log() {debug_log(!!store.get(debug_log_key))}
 function toggle_debug_log() {debug_log(!!toggle_stored(debug_log_key))}
 update_debug_log()
 
-// modules
-const {create_game, create_game_from_sgf} = require('./game.js')
-const P = require('./powered_goban.js')
 
 // state
 let game = create_game()
@@ -78,7 +79,12 @@ let pausing = false, busy = false
 const stored_keys_for_renderer =
       ['lizzie_style', 'expand_winrate_bar', 'score_bar',
        'let_me_think', 'show_endstate']
-const R = {stones: game.current_stones(), bturn: true, ...renderer_preferences()}
+const R: {
+    stones: any;
+    bturn: any;
+	show_endstate?: any;
+	suggest?: any[];
+} = {stones: game.current_stones(), bturn: true, ...renderer_preferences()}
 P.initialize(R, {on_change: update_let_me_think, on_suggest: try_auto}, {
     // functions used in powered_goban.js
     render, update_state, update_ponder, show_suggest_p, is_pass,
@@ -137,7 +143,7 @@ function get_windows() {
     return windows = windows.filter(win => !win.isDestroyed())
 }
 
-function get_new_window(file_name, opt) {
+function get_new_window(file_name, opt?) {
     const win = new electron.BrowserWindow(opt)
     win.loadURL('file://' + __dirname + '/' + file_name)
     return win
@@ -208,7 +214,7 @@ const api = merge({}, simple_api, {
     send_to_leelaz: P.send_to_leelaz,
 })
 
-function api_handler(channel, handler, busy) {
+function api_handler(channel, handler, busy = false) {
     return (e, ...args) => {
         channel === 'toggle_auto_analyze' || stop_auto_analyze()
         channel === 'play_best' || stop_auto_play()
@@ -241,7 +247,7 @@ ipc.on('close_window_or_cut_sequence', e => {
 /////////////////////////////////////////////////
 // main flow (2) change game state and send it to powered_goban
 
-function play(move, force_create, default_tag) {
+function play(move: string, force_create = false, default_tag?) {
     const [i, j] = move2idx(move), pass = (i < 0)
     if (!pass && (aa_ref(R.stones, i, j) || {}).stone) {wink(); return}
     const new_sequence_p = (game.len() > 0) && create_sequence_maybe(force_create)
@@ -249,7 +255,7 @@ function play(move, force_create, default_tag) {
     update_state(); do_play(move, R.bturn, tag || default_tag || undefined)
     pass && wink()
 }
-function do_play(move, is_black, tag) {
+function do_play(move: string, is_black: boolean, tag?: string) {
     // We drop "double pass" to avoid halt of analysis by Leelaz.
     // B:D16, W:Q4, B:pass ==> ok
     // B:D16, W:Q4, B:pass, W:D4 ==> ok
@@ -284,7 +290,7 @@ function update_state_to_move_count_tentatively(count) {
     const forward = (count > game.move_count)
     const [from, to] = forward ? [game.move_count, count] : [count, game.move_count]
     const set_stone_at = (move, stone_array, stone) => {
-        aa_set(stone_array, ...move2idx(move), stone)
+        (aa_set as any)(stone_array, ...move2idx(move), stone)
     }
     game.slice(from, to).forEach(m => set_stone_at(m.move, R.stones, {
         stone: true, maybe: forward, maybe_empty: !forward, black: m.is_black
@@ -312,7 +318,7 @@ function menu_template(win) {
     const menu = (label, submenu) => ({label, submenu: submenu.filter(truep)})
     const stop_auto_and = f => ((...a) => {stop_auto(); f(...a)})
     const ask_sec = redoing => ((this_item, win) => ask_auto_play_sec(win, redoing))
-    const item = (label, accelerator, click, standalone_only, enabled, keep_auto) =>
+    const item = (label, accelerator, click, standalone_only = false, enabled = false, keep_auto = false) =>
           !(standalone_only && attached) && {
               label, accelerator, click: keep_auto ? click : stop_auto_and(click),
               enabled: enabled || (enabled === undefined)
@@ -418,7 +424,7 @@ function board_type_menu_item(label, type, win) {
             click: (this_item, win) => set_board_type(type, win)}
 }
 
-function store_toggler_menu_item(label, key, accelerator, on_click) {
+function store_toggler_menu_item(label: string, key: string, accelerator?, on_click?) {
     const toggle_it = () => toggle_stored(key)
     return {label, accelerator, type: 'checkbox', checked: store.get(key),
             click: on_click || toggle_it}
@@ -484,7 +490,7 @@ function try_auto_analyze(force_next) {
     const next = (pred, proc) => pred() ?
           proc() : (pause(), stop_auto_analyze(), update_ui())
     auto_bturn = xor(R.bturn, done)
-    done && next(...(backward_auto_analysis_p() ? [undoable, undo] : [redoable, redo]))
+    done && next(...(backward_auto_analysis_p() ? [undoable, undo] : [redoable, redo]) as [any, any])
 }
 function toggle_auto_analyze(visits) {
     if (game.is_empty()) {wink(); return}
@@ -546,21 +552,21 @@ function decrement_auto_play_count() {auto_play_count--}
 function stop_auto_play() {
     auto_playing() && ((auto_play_count = 0), let_me_think_exit_autoplay())
 }
-function auto_playing(forever) {
+function auto_playing(forever = false) {
     return auto_play_count >= (forever ? Infinity : 1)
 }
 
 /////////////////////////////////////////////////
 // play against leelaz
 
-function play_best(n, weaken_method, ...weaken_args) {
+function play_best(n?, weaken_method?, ...weaken_args) {
     auto_play(null, true); increment_auto_play_count(n)
     try_play_best(weaken_method, ...weaken_args)
 }
 function play_weak(percent) {
     play_best(null, P.leelaz_for_white_p() ? 'random_leelaz' : 'random_candidate', percent)
 }
-function try_play_best(weaken_method, ...weaken_args) {
+function try_play_best(weaken_method?, ...weaken_args) {
     // (ex)
     // try_play_best()
     // try_play_best('pass_maybe')
@@ -579,7 +585,7 @@ function try_play_best(weaken_method, ...weaken_args) {
     do_as_auto_play(move !== 'pass', play_it)
 }
 function best_move() {return R.suggest[0].move}
-function weak_move(weaken_percent) {
+function weak_move(weaken_percent?: number) {
     // (1) Converge winrate to 0 with move counts
     // (2) Occasionally play good moves with low probability
     // (3) Do not play too bad moves
@@ -623,7 +629,7 @@ function toggle_board_type(window_id, type) {
     const new_type = (type && board_type !== type) ? type : previous_board_type
     set_board_type(new_type, win, !type)
 }
-function set_board_type(type, win, keep_let_me_think) {
+function set_board_type(type, win, keep_let_me_think = false) {
     const prop = window_prop(win), {board_type, previous_board_type} = prop
     if (!type || type === board_type) {return}
     keep_let_me_think || stop_let_me_think()
@@ -699,7 +705,7 @@ function redoable() {return game.len() > game.move_count}
 function pause() {pausing = true; update_ponder_and_ui()}
 function resume() {pausing = false; update_ponder_and_ui()}
 function toggle_pause() {pausing = !pausing; update_ponder_and_ui()}
-function set_or_unset_busy(bool) {busy = bool; update_ponder()}
+function set_or_unset_busy(bool: boolean) {busy = bool; update_ponder()}
 function set_busy() {set_or_unset_busy(true)}
 function unset_busy() {set_or_unset_busy(false); update_state(true)}
 function update_ponder() {P.set_pondering(pausing, busy)}
@@ -735,7 +741,7 @@ const let_me_think_board_type =
       {first_half: 'double_boards_swap', latter_half: 'double_boards'}
 let let_me_think_previous_stage = null
 
-function update_let_me_think(only_when_stage_is_changed) {
+function update_let_me_think(only_when_stage_is_changed = false) {
     if (!let_me_think_p()) {let_me_think_previous_stage = null; return}
     let_me_think_switch_board_type(only_when_stage_is_changed)
 }
@@ -791,7 +797,7 @@ function create_sequence_maybe(force) {
 
 function next_sequence() {previous_or_next_sequence(1)}
 function previous_sequence() {previous_or_next_sequence(-1)}
-function previous_or_next_sequence(delta, effect) {
+function previous_or_next_sequence(delta, effect?) {
     sequence.length > 1 && nth_sequence(sequence_cursor + delta)
 }
 function nth_sequence(n) {
@@ -807,7 +813,7 @@ function cut_sequence() {
     push_deleted_sequence(game); delete_sequence()
 }
 function uncut_sequence() {
-    insert_before = (cut_first_p && sequence_cursor === 0)
+    let insert_before = (cut_first_p && sequence_cursor === 0)
     exist_deleted_sequence() &&
         insert_sequence(pop_deleted_sequence(), true, insert_before)
 }
@@ -832,7 +838,7 @@ function delete_sequence() {
 }
 function delete_sequence_internal() {sequence.splice(sequence_cursor, 1)}
 
-function insert_sequence(new_game, switch_to, before) {
+function insert_sequence(new_game, switch_to: boolean, before = false) {
     if (!new_game) {return}
     const f = switch_to ? switch_to_nth_sequence : goto_nth_sequence
     const n = sequence_cursor + (before ? 0 : 1)
@@ -864,7 +870,7 @@ function exist_deleted_sequence() {return !empty(deleted_sequences)}
 /////////////////////////////////////////////////
 // utils for updating renderer state
 
-function update_state(keep_suggest_p) {
+function update_state(keep_suggest_p = false) {
     const history_length = game.len(), sequence_length = sequence.length
     const sequence_ids = sequence.map(h => h.id)
     const pick_tagged = h => {
@@ -880,7 +886,7 @@ function update_state(keep_suggest_p) {
     update_ui(true)
 }
 
-function update_ui(ui_only) {
+function update_ui(ui_only?) {
     update_menu(); renderer_with_window_prop('update_ui', availability(), ui_only)
 }
 
@@ -931,7 +937,7 @@ function load_weight_file(weight_file) {
     return weight_file
 }
 function select_files(title) {
-    return files = dialog.showOpenDialog(null, {
+    return dialog.showOpenDialog(null, {
         properties: ['openFile'], title: title,
         defaultPath: option.weight_dir,
     }) || []
@@ -946,7 +952,7 @@ function load_engine() {
 
 // restart
 function restart() {restart_with_args()}
-function restart_with_args(h, new_weight_p) {P.restart(h, new_weight_p)}
+function restart_with_args(h?, new_weight_p = false) {P.restart(h, new_weight_p)}
 let last_restart_time = 0
 function auto_restart() {
     const buttons =
@@ -1017,7 +1023,7 @@ function load_sabaki_gametree_on_new_game(gametree) {
     backup_game(); load_sabaki_gametree(gametree)
 }
 
-function load_sabaki_gametree(gametree, index) {
+function load_sabaki_gametree(gametree, index?) {
     if (!game.load_sabaki_gametree(gametree, index)) {return}
     P.set_board(game)
     // force update of board color when C-c and C-v are typed successively
@@ -1049,12 +1055,12 @@ function stop_sabaki() {
 function sabaki_reader(line) {
     debug_log(`sabaki> ${line}`)
     const m = line.match(/^sabaki_dump_state:\s*(.*)/)
-    m && load_sabaki_gametree(...(JSON.parse(m[1]).treePosition || []))
+    m && load_sabaki_gametree(...(JSON.parse(m[1]).treePosition || []) as [any, any])
 }
 
 function attach_to_sabaki() {
     if (attached || !has_sabaki) {return}
-    const sgf_file = TMP.fileSync({mode: 0644, prefix: 'lizgoban-', postfix: '.sgf'})
+    const sgf_file = TMP.fileSync({mode: 0o0644, prefix: 'lizgoban-', postfix: '.sgf'})
     const sgf_text = game.to_sgf()
     fs.writeSync(sgf_file.fd, sgf_text)
     debug_log(`temporary file (${sgf_file.name}) for sabaki: ${sgf_text}`)

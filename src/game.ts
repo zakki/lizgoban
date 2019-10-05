@@ -1,5 +1,6 @@
-require('./util.js').use(); require('./coord.js').use()
-const {stones_from_history} = require('./rule.js')
+import { move2sgfpos, sgfpos2move } from "./coord"
+import { stones_from_history } from "./rule"
+import { aa2hash, common_header_length, empty, last, last_loaded_element_tag_letter, merge, normal_tag_letters } from "./util"
 const SGF = require('@sabaki/sgf')
 
 /////////////////////////////////////////////////
@@ -24,8 +25,9 @@ const SGF = require('@sabaki/sgf')
 let next_game_id = 0
 function new_game_id() {return next_game_id++}
 
-function create_game(init_history, init_prop) {
-    const self = {}, history = init_history || []  // private
+export function create_game(init_history?, init_prop?) {
+    const self: any = {};
+    const history = init_history || []  // private
     const prop = init_prop || {  // public
         move_count: 0, player_black: "", player_white: "",
         sgf_file: "", sgf_str: "", id: new_game_id(),
@@ -79,7 +81,7 @@ function game_to_sgf(game) {
         ')'
 }
 
-function create_game_from_sgf(sgf_str) {
+export function create_game_from_sgf(sgf_str) {
     try {return create_game_from_sgf_unsafe(sgf_str)} catch (e) {return false}
 }
 function create_game_from_sgf_unsafe(sgf_str) {
@@ -166,8 +168,3 @@ function add_or_remove_tag_on_game(game) {
     const h = game.ref_current(); if (!h) {return}
     const t = h.tag; h.tag = (t ? t.slice(0, -1) : new_tag_for_game(game))
 }
-
-/////////////////////////////////////////////////
-// exports
-
-module.exports = {create_game, create_game_from_sgf}

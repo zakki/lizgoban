@@ -6,13 +6,17 @@
 // util
 function Q(x) {return document.querySelector(x)}
 const electron = require('electron'), ipc = electron.ipcRenderer
-require('./util.js').use(); require('./coord.js').use()
+import { board_size, idx2move, move2idx } from "./coord"
+// drawer
+import * as D from "./draw"
+import { aa_ref, clip, Coordinate, deferred_procs, do_nothing, each_key_value, empty, endstate_diff_tag_letter, identity, mac_p, merge, seq, start_moves_tag_letter, tag_letters, to_f, to_i, truep } from "./util"
+
 const current_window = electron.remote.getCurrentWindow()
 
 // canvas
 const main_canvas = Q('#goban'), sub_canvas = Q('#sub_goban')
 const winrate_bar_canvas = Q('#winrate_bar'), winrate_graph_canvas = Q('#winrate_graph')
-const graph_overlay_canvas = Q('#graph_overlay')
+export const graph_overlay_canvas = Q('#graph_overlay')
 
 // renderer state
 const R = {
@@ -27,6 +31,12 @@ const R = {
     history_tags: [], endstate_clusters: [], prev_endstate_clusters: null,
     lizzie_style: false,
     window_id: -1,
+
+    show_endstate: null,
+    player_black: null as string,
+    player_white: null as string,
+    endstate_diff_interval: null,
+    trial: null,
 }
 let temporary_board_type = null, the_first_board_canvas = null
 let keyboard_moves = [], keyboard_tag_move_count = null
@@ -34,8 +44,7 @@ let hovered_move = null, hovered_move_count = null, hovered_board_canvas = null
 let the_showing_movenum_p = false, the_showing_endstate_value_p = false
 let thumbnails = []
 
-// drawer
-const D = require('./draw.js'); D.set_state(R)
+ D.set_state(R);
 
 // handler
 window.onload = window.onresize = update
@@ -74,7 +83,7 @@ function show_dialog(name) {
     Q(name).style.visibility = "visible"; Q(`${name} input`).select()
 }
 function hide_dialog() {
-    document.querySelectorAll(".dialog").forEach(d => d.style.visibility = "hidden")
+    document.querySelectorAll(".dialog").forEach(d => (d as HTMLElement).style.visibility = "hidden")
 }
 
 function play_moves(moves) {
@@ -141,7 +150,7 @@ function update_body_color() {
 // draw parts
 
 // set option "main_canvas_p" etc. for d(canvas, opts)
-function with_opts(d, opts) {
+function with_opts(d, opts?) {
     return c => (update_first_board_canvas(c), d(c, {
         main_canvas_p: c === main_canvas, selected_suggest: selected_suggest(c),
         first_board_p: is_first_board_canvas(c),
@@ -210,7 +219,7 @@ const double_boards_rule = {
 function update_goban() {
     reset_first_board_canvas()
     const btype = current_board_type()
-    const f = (m, w, s) => (m(main_canvas),
+    const f = (m, w?, s?) => (m(main_canvas),
                             (w || draw_wr_graph)(winrate_graph_canvas),
                             do_on_sub_canvas_when_idle(s),
                             draw_wr_bar(winrate_bar_canvas))
@@ -247,7 +256,7 @@ function if_hover_on(canvas, val) {return (canvas === hovered_board_canvas) && v
 
 function current_board_type() {return temporary_board_type || R.board_type}
 
-function set_temporary_board_type(btype, btype2) {
+function set_temporary_board_type(btype, btype2?) {
     const b = (R.board_type === btype) ? btype2 : btype
     if (temporary_board_type === b) {return}
     temporary_board_type = b; update_board_type()
@@ -289,9 +298,9 @@ function play_here(e, coord2idx, tag_clickable_p) {
 function hover_here(e, coord2idx, canvas) {
     set_hovered(mouse2move(e, coord2idx) || 'last_move', null, canvas)
 }
-function hover_off(canvas) {set_hovered(null, null, null)}
+function hover_off(canvas?) {set_hovered(null, null, null)}
 
-function goto_idx_maybe(idx, another_board, tagged_stone_only) {
+function goto_idx_maybe(idx, another_board, tagged_stone_only?) {
     const mc = latest_move_count_for_idx(idx, tagged_stone_only)
     return mc &&
         (duplicate_if(another_board), main('goto_move_count', mc), wink(), true)
@@ -331,7 +340,7 @@ function hover_on_graph(e, coord2sr, canvas) {
 
 // When board is switched without mouse move,
 // we need to re-calculate hovered_move_count.
-function add_mouse_handlers_with_record(canvas, handlers, hover_updater) {
+function add_mouse_handlers_with_record(canvas, handlers, hover_updater?) {
     const with_record_gen = bool => f =>
           e => (f(e), (canvas.lizgoban_last_mouse_move_event = bool && e))
     const with_record = with_record_gen(true), with_unrecord = with_record_gen(false)
@@ -368,7 +377,7 @@ function set_hovered_move_count_as(count) {
 
 // util
 
-function latest_move_count_for_idx(idx, tagged_stone_only) {
+function latest_move_count_for_idx(idx: [number, number], tagged_stone_only?) {
     const s = idx && aa_ref(R.stones, ...idx)
     const go = s && (!tagged_stone_only || (s.tag && s.stone))
     // use !! for safety (truep('') is true)
@@ -379,7 +388,7 @@ function mouse2coord(e) {
     const bbox = e.target.getBoundingClientRect()
     return [e.clientX - bbox.left, e.clientY - bbox.top]
 }
-function mouse2idx(e, coord2idx) {
+function mouse2idx(e, coord2idx): Coordinate {
     const [i, j] = coord2idx(...mouse2coord(e))
     return (0 <= i && i < board_size && 0 <= j && j < board_size) && [i, j]
 }
@@ -427,7 +436,7 @@ function store_thumbnail(id, url, name) {
 // because "font-size" seems to have some lower bound.
 // (ref) http://www.google.com/search?q=chrome%20minimum%20font%20size%20setting
 
-function update_all_thumbnails(style) {
+function update_all_thumbnails(style?: string) {
     discard_unused_thumbnails()
     const div = Q("#thumbnails"), preview = Q("#preview")
     const measurer = Q("#thumb_height_measurer")
@@ -453,7 +462,7 @@ function update_thumbnail_containers(ids, div) {
 function update_thumbnail_contents(ids, div, preview) {
     ids.forEach((id, n) => {
         const box = div.children[n], img = box.children[0], thumb = thumbnails[id]
-        const set_action = (clickp, enter_leave_p) => {
+        const set_action = (clickp?, enter_leave_p?) => {
             box.onclick =
                 (clickp && (() => !R.attached && (main('nth_sequence', n),
                                                   preview.classList.remove('show'))))
@@ -544,11 +553,13 @@ document.onkeydown = e => {
     // GROUP 1: for input forms
     const escape = (key === "Escape" || key === "C-[")
     escape && hide_dialog()
+    if (!(e.target instanceof HTMLElement))
+    return;
     switch (key === "Enter" && e.target.id) {
     case "auto_analysis_visits": toggle_auto_analyze(); return
     case "auto_play_sec": start_auto_play(); return
     }
-    if (e.target.tagName === "INPUT" && e.target.type !== "button") {
+    if (e.target.tagName === "INPUT" && (e.target as HTMLInputElement).type !== "button") {
         escape && e.target.blur(); return
     }
     // GROUP 2: allow auto-repeat
@@ -581,7 +592,7 @@ document.onkeydown = e => {
     }
     // GROUP 4: stand-alone only
     const until = showing_until()
-    const play_it = (steps, another_board) =>
+    const play_it = (steps, another_board?) =>
           D.target_move() ? m('play', D.target_move(), another_board) :
           truep(until) ? (duplicate_if(another_board), m('goto_move_count', until)) :
           truep(steps) ? m('play_best', steps) :
@@ -643,7 +654,7 @@ function showing_endstate_value_p() {return the_showing_endstate_value_p}
 function set_showing_endstate_value_p(val) {
     the_showing_endstate_value_p = val; update_goban()
 }
-function showing_until(canvas) {
+function showing_until(canvas?) {
     const ret = (by_tag, by_hover) =>
           (by_tag && keyboard_tag_move_count) ||
           (by_hover && showing_movenum_p() &&
@@ -672,7 +683,7 @@ function update_board_type() {
 // buttons
 
 function update_button_etc(availability) {
-    const f = (key, ids) =>
+    const f = (key, ids?) =>
           (ids || key).split(/ /).forEach(x => update_ui_element('#' + x, availability[key]))
     f('undo', 'undo undo_ntimes undo_to_start explicit_undo')
     f('redo', 'redo redo_ntimes redo_to_end')

@@ -12,9 +12,10 @@
 // undefined
 // > bar(3)
 // 4
-
+/*
 module.exports = {
     export_globally: (m, h) => (m.exports = Object.assign({}, h, {
         use: () => {Object.assign(global, h)}
     }))
 }
+*/

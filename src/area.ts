@@ -2,7 +2,7 @@
 
 // fix me: inefficient...
 
-require('./util.js').use(); require('./coord.js').use()
+import { aa2hash, aa_each, aa_map, aa_ref, around_idx, Coordinate, do_ntimes, empty, flatten, truep } from "./util"
 
 const minor_ownership = 0.1
 const too_large_cluster_size = 40
@@ -20,7 +20,7 @@ const category_spec = [
 //////////////////////////////////////
 // main
 
-function endstate_clusters_for(endstate) {
+export function endstate_clusters_for(endstate) {
     initialize()
     const grid_for = z => ({ownership: z, id: null})
     const grid = aa_map(endstate, grid_for)
@@ -85,7 +85,7 @@ function cluster_from([i, j], region, grid, category) {
     return make_cluster(id, color, type, ijs)
 }
 
-function add_newcomer_maybe(ij, state, grid) {
+function add_newcomer_maybe(ij: Coordinate, state, grid) {
     const g = aa_ref(grid, ...ij)
     if (!g || truep(g.id) || !is_member(ij, state.region)) {return}
     state.ijs.push(ij); state.newcomers.push(ij); g.id = state.id
@@ -114,7 +114,7 @@ function cluster_characteristics(id, ijs, grid) {
 }
 
 function boundary_of(id, ijs, grid) {
-    const same_cluster_p = idx => (aa_ref(grid, ...idx) || {}).id === id
+    const same_cluster_p = (idx: Coordinate) => (aa_ref(grid, ...idx) || {}).id === id
     const checker_for = ij =>
           (idx, direction) => same_cluster_p(idx) ? null : [ij, direction]
     const boundary_around = ij => around_idx(ij).map(checker_for(ij)).filter(truep)
@@ -181,7 +181,7 @@ function is_member(idx, region) {
 //////////////////////////////////////
 // divide large areas by bottlenecks
 
-function core_clusters_in(region, core, grid, category) {
+function core_clusters_in(region: Coordinate[], core, grid, category) {
     const rest = region.filter(ij => !truep(aa_ref(grid, ...ij).id))
     const core_clusters = clusters_in_region(core, grid, category)
     inflate_clusters(core_clusters, rest, grid)
@@ -193,12 +193,12 @@ function core_clusters_in(region, core, grid, category) {
 
 function inflate_clusters(clusters, region, grid) {
     const cluster_for = aa2hash(clusters.map(c => [c.id, c]))
-    const id_at = ij => (aa_ref(grid, ...ij) || {}).id
+    const id_at = (ij: Coordinate) => (aa_ref(grid, ...ij) || {}).id
     const fresh = ij => !truep(id_at(ij))
     const labeled = ij => !fresh(ij) && is_member(ij, region)
     const penetrate = r => {
         // pool is needed for breadth-first search
-        const ret = r.filter(fresh), pool = []
+        const ret = r.filter(fresh), pool: Array<[Coordinate, any]> = []
         const pool_maybe = (ij, touched) => touched && pool.push([ij, id_at(touched)])
         const check = ij => pool_maybe(ij, find_around(ij, labeled))
         ret.forEach(check)
@@ -214,7 +214,8 @@ function inflate_clusters(clusters, region, grid) {
 
 //////////////////////////////////////
 // exports
-
+/*
 module.exports = {
     endstate_clusters_for,
 }
+*/

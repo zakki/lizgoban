@@ -1,6 +1,7 @@
-require('./util.js').use(); require('./coord.js').use()
+import { array2hash, common_header_length, debug_log, deferred_procs, do_nothing, do_ntimes, each_line, empty, last, make_speedometer, set_error_handler, to_f, to_i, to_s, truep } from "./util"
 
-function create_leelaz () {
+
+export function create_leelaz () {
 
     /////////////////////////////////////////////////
     // setup
@@ -18,7 +19,7 @@ function create_leelaz () {
     let move_count = 0, bturn = true
 
     // util
-    const log = (header, s, show_queue_p) => {
+    const log = (header: string, s: string, show_queue_p?) => {
         const format = x => (to_s(x).match(/.{0,4}[.].{2}/) || [''])[0]
         const ti = format(Date.now() / 1000 + 0.0001)
         const t2s = task => (task.protect_p ? '!' : '') +
@@ -77,7 +78,7 @@ function create_leelaz () {
     let on_ready = () => {
         if (is_ready) {return}; is_ready = true
         leelaz(`komi ${arg.komi}`)
-        const checks = [['minmoves', 'lz-analyze interval 1 minmoves 30'],
+        const checks: [string, string][] = [['minmoves', 'lz-analyze interval 1 minmoves 30'],
                         ['endstate', 'endstate_map'],
                         ['kata-analyze', 'kata-analyze interval 1']]
         checks.map(a => check_supported(...a))
@@ -103,7 +104,7 @@ function create_leelaz () {
     const undo1 = () => {leelaz('undo')}
 
     // util
-    const leelaz = (command, on_response, protect_p) => {
+    const leelaz = (command: string, on_response?, protect_p?: boolean) => {
         log('queue>', command, true); send_to_queue({command, on_response, protect_p})
     }
     const update_now = () => {endstate(); start_analysis()}
@@ -267,7 +268,8 @@ function create_leelaz () {
     /////////////////////////////////////////////////
     // stderr reader
 
-    let current_reader, the_nn_eval_reader = do_nothing
+    let current_reader;
+    let the_nn_eval_reader: ((...args) => any) = do_nothing
 
     const reader = (s) => {log('stderr|', s); current_reader(s)}
 
@@ -315,7 +317,7 @@ function create_leelaz () {
 
     let supported = {}
     const check_supported =
-          (feature, cmd) => leelaz(cmd, ok => (supported[feature] = ok), true)
+          (feature: string, cmd: string) => leelaz(cmd, ok => (supported[feature] = ok), true)
     const is_supported = feature => supported[feature]
     const is_katago = () => is_supported('kata-analyze')
 
@@ -330,8 +332,3 @@ function create_leelaz () {
     }
 
 }  // end create_leelaz
-
-/////////////////////////////////////////////////
-// exports
-
-module.exports = {create_leelaz}
