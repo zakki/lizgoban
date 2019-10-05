@@ -1,8 +1,9 @@
-require('./util.js').use(); require('./coord.js').use()
+import { move2idx } from "./coord"
+import { aa_new, aa_ref, aa_set, around_idx, empty, xor } from "./util"
 
 // illegal moves are not checked (ko, suicide, occupied place, ...)
 
-function stones_from_history(history) {
+export function stones_from_history(history) {
     const stones = aa_new(19, 19, () => ({}))
     history.forEach((h, k) => put(h, stones, k === history.length - 1))
     return stones
@@ -25,7 +26,7 @@ function remove_dead(ij, is_black, stones) {
     while (!empty(state.hope)) {
         if (search_for_liberty(state)) {return}
     }
-    state.dead_pool.forEach(idx => aa_set(stones, ...idx, {}))
+    state.dead_pool.forEach(idx => aa_set(stones, idx[0], idx[1], {}))
 }
 
 function search_for_liberty(state) {
@@ -40,9 +41,5 @@ function check_if_liberty(ij, state) {
 function push_hope(ij, s, state) {
     if (xor(s.black, state.is_black) || aa_ref(state.dead_map, ...ij)) {return}
     state.hope.push(ij)
-    state.dead_pool.push(ij); aa_set(state.dead_map, ...ij, true)
-}
-
-module.exports = {
-    stones_from_history,
+    state.dead_pool.push(ij); aa_set(state.dead_map, ij[0], ij[1], true)
 }

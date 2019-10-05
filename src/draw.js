@@ -3,7 +3,10 @@
 /////////////////////////////////////////////////
 // setup
 
-require('./util.js').use(); require('./coord.js').use()
+import { board_size, idx2coord_translator_pair, idx2move, move2idx, uv2coord_translator_pair } from "./coord"
+import { graph_overlay_canvas } from "./renderer"
+import { around_idx_diff, clip, each_key_value, empty, flatten, identity, last, merge, num_sort, seq, to_i, to_s, truep, xor } from "./util"
+
 
 // color constant
 const BLACK = "#000", WHITE = "#fff"
@@ -24,8 +27,9 @@ const EXPECTED_COLOR = 'rgba(0,0,255,0.3)', UNEXPECTED_COLOR = 'rgba(255,0,0,0.8
 const GOBAN_BG_COLOR = {"": "#f9ca91", p: "#a38360", t: "#f7e3cd", pt: "#a09588"}
 
 // state
-let R = {}, target_move = null
-function set_state(given_R) {R = given_R}  // fixme: ugly
+let R = {}
+export let target_move = null
+export function set_state(given_R) {R = given_R}  // fixme: ugly
 
 // util
 function f2s(z, digits) {return truep(z) ? z.toFixed(truep(digits) ? digits : 1) : ''}
@@ -33,12 +37,12 @@ function f2s(z, digits) {return truep(z) ? z.toFixed(truep(digits) ? digits : 1)
 /////////////////////////////////////////////////
 // various gobans
 
-function draw_raw_goban(canvas, options) {
+export function draw_raw_goban(canvas, options) {
     const u = options.show_until
     u ? draw_goban_until(canvas, u, options) : draw_goban(canvas, null, options)
 }
 
-function draw_main_goban(canvas, options) {
+export function draw_main_goban(canvas, options) {
     const opts = {draw_visits_p: true, read_only: R.attached, ...options}
     const u = options.show_until, h = options.selected_suggest
     target_move = !u && (h.visits > 0) && h.move
@@ -122,13 +126,13 @@ function draw_goban_with_variation(canvas, suggest, opts) {
                 mapping_to_winrate_bar, ...opts})
 }
 
-function draw_goban_with_principal_variation(canvas, options) {
+export function draw_goban_with_principal_variation(canvas, options) {
     const opts = {read_only: true, force_draw_expected_p: true,
                   mapping_to_winrate_bar: false, ...options}
     draw_goban_with_variation(canvas, R.suggest[0] || {}, opts)
 }
 
-function draw_endstate_goban(canvas, options) {
+export function draw_endstate_goban(canvas, options) {
     const past_p = past_endstate_p(options.draw_endstate_value_p)
     const scores = winrate_history_values_of('score_without_komi')
     const past_score = scores[R.move_count - R.endstate_diff_interval]
@@ -493,7 +497,7 @@ function draw_mapping_tics(unit, canvas, g) {
     })
 }
 
-function mapping_text(suggest) {
+function mapping_text(suggest, ...opts) {
     const [winrate_text, visits_text, prior_text, score_text, score_stdev_text]
           = suggest_texts(suggest) || []
     const v = visits_text ? ` (${visits_text})` : ''
@@ -515,7 +519,7 @@ function mapping_line_coords(b_winrate, unit, canvas) {
 
 let winrate_bar_prev = 50
 
-function draw_winrate_bar(canvas, large_bar, pale_text_p) {
+export function draw_winrate_bar(canvas, large_bar, pale_text_p) {
     const w = canvas.width, h = canvas.height, g = canvas.getContext("2d")
     const score_p = score_bar_p(), tics = score_p ? 19 : 9
     const xfor = percent => w * percent / 100
@@ -756,12 +760,16 @@ function winrate_bar_order_set_style(s, fontsize, g) {
 
 // calc
 
+/**
+ * @returns {[number, number, number, number, number, number, number]}
+ */
 function winrate_bar_xy(suggest, w, h, supplementary, bturn) {
     const real_wr = suggest.winrate, max_radius = winrate_bar_max_radius(w, h)
     const wr = fake_winrate(suggest, bturn)
     const x_for = winrate => w * flip_maybe(winrate, bturn) / 100
     const y_for = visits => winrate_bar_y(visits, w, h, max_radius)
     const x = x_for(wr), y = y_for(suggest.visits)
+    // @ts-ignore
     if (!supplementary) {return [x, y]}
     // omit PUCT and LCB for score_bar
     const maybe_x_for = winrate => x_for(score_bar_p() ? wr : winrate)
@@ -835,7 +843,7 @@ function fake_winrate_for(winrate, score_without_komi, bturn) {
 /////////////////////////////////////////////////
 // winrate graph
 
-function draw_winrate_graph(canvas, show_until, handle_mouse_on_winrate_graph) {
+export function draw_winrate_graph(canvas, show_until, handle_mouse_on_winrate_graph) {
     const w = canvas.width, h = canvas.height, g = canvas.getContext("2d")
     const tics = 9, xmargin = w * 0.02, fontsize = to_i(w * 0.04)
     const smax = Math.max(R.history_length, 1)
@@ -980,7 +988,7 @@ const winrate_trail_max_suggestions = 10
 const winrate_trail_limit_relative_visits = 0.3
 let winrate_trail = {}, winrate_trail_move_count = 0, winrate_trail_visits = 0
 
-function update_winrate_trail() {
+export function update_winrate_trail() {
     const total_visits_increase = R.visits - winrate_trail_visits;
     // check visits for detecting restart of leelaz
     (winrate_trail_move_count !== R.move_count ||
@@ -1041,7 +1049,7 @@ function winrate_trail_searched(suggest) {
 /////////////////////////////////////////////////
 // visits trail
 
-function draw_visits_trail(canvas) {
+export function draw_visits_trail(canvas) {
     const w = canvas.width, h = canvas.height, g = canvas.getContext("2d")
     const fontsize = h / 10, top_margin = 3
     const v2x = v => v / R.visits * w
@@ -1098,7 +1106,12 @@ function draw_visits_trail_order(s, a, forcep, fontsize, h, xy_for, g) {
 /////////////////////////////////////////////////
 // graphics
 
-function clear_canvas(canvas, bg_color, g) {
+/**
+ * @param {HTMLCanvasElement} canvas
+ * @param {string} [bg_color]
+ * @param {CanvasRenderingContext2D} [g]
+ */
+export function clear_canvas(canvas, bg_color, g) {
     canvas.style.background = bg_color || TRANSPARENT;
     (g || canvas.getContext("2d")).clearRect(0, 0, canvas.width, canvas.height)
 }
@@ -1180,11 +1193,11 @@ function merge_stone_at(move, stone_array, stone) {
     const [i, j] = move2idx(move); (i >= 0) && merge_stone(stone_array[i][j], stone)
 }
 
-function is_next_move(move) {
-    [i, j] = move2idx(move); return (i >= 0) && R.stones[i][j].next_move
+export function is_next_move(move) {
+    let [i, j] = move2idx(move); return (i >= 0) && R.stones[i][j].next_move
 }
 
-function latest_move(moves, show_until) {
+export function latest_move(moves, show_until) {
     if (!moves) {return false}
     const n = moves.findIndex(z => (z.move_count > show_until))
     return n >= 0 ? moves[n - 1] : last(moves)
@@ -1243,15 +1256,4 @@ function kilo_str_sub(x, rules) {
     // +0.1 for "1.0K" instead of "1K"
     const y = (x + 0.1) / base, z = Math.floor(y)
     return (y < 10 ? to_s(y).slice(0, 3) : to_s(z)) + unit
-}
-
-//////////////////////////////////
-
-module.exports = {
-    set_state,
-    draw_raw_goban, draw_main_goban, draw_goban_with_principal_variation,
-    draw_endstate_goban,
-    draw_winrate_graph, draw_winrate_bar, draw_visits_trail,
-    update_winrate_trail, clear_canvas, is_next_move, latest_move,
-    target_move: () => target_move,
 }

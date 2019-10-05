@@ -1,6 +1,7 @@
-require('./util.js').use(); require('./coord.js').use()
+import { array2hash, common_header_length, debug_log, deferred_procs, do_nothing, do_ntimes, each_line, empty, last, make_speedometer, set_error_handler, to_f, to_i, to_s, truep } from "./util"
 
-function create_leelaz () {
+
+export function create_leelaz () {
 
     /////////////////////////////////////////////////
     // setup
@@ -330,8 +331,3 @@ function create_leelaz () {
     }
 
 }  // end create_leelaz
-
-/////////////////////////////////////////////////
-// exports
-
-module.exports = {create_leelaz}

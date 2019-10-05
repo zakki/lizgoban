@@ -2,7 +2,7 @@
 
 // fix me: inefficient...
 
-require('./util.js').use(); require('./coord.js').use()
+import { aa2hash, aa_each, aa_map, aa_ref, around_idx, do_ntimes, empty, flatten, truep } from "./util"
 
 const minor_ownership = 0.1
 const too_large_cluster_size = 40
@@ -20,7 +20,7 @@ const category_spec = [
 //////////////////////////////////////
 // main
 
-function endstate_clusters_for(endstate) {
+export function endstate_clusters_for(endstate) {
     initialize()
     const grid_for = z => ({ownership: z, id: null})
     const grid = aa_map(endstate, grid_for)
@@ -210,11 +210,4 @@ function inflate_clusters(clusters, region, grid) {
     }
     let rest = region
     while (!empty(rest)) {rest = penetrate(rest)}
-}
-
-//////////////////////////////////////
-// exports
-
-module.exports = {
-    endstate_clusters_for,
 }

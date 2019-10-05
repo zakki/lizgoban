@@ -6,13 +6,17 @@
 // util
 function Q(x) {return document.querySelector(x)}
 const electron = require('electron'), ipc = electron.ipcRenderer
-require('./util.js').use(); require('./coord.js').use()
+import { board_size, idx2move, move2idx } from "./coord"
+// drawer
+import * as D from "./draw"
+import { aa_ref, clip, deferred_procs, do_nothing, each_key_value, empty, endstate_diff_tag_letter, identity, mac_p, merge, seq, start_moves_tag_letter, tag_letters, to_f, to_i, truep, each_value } from "./util"
+
 const current_window = electron.remote.getCurrentWindow()
 
 // canvas
 const main_canvas = Q('#goban'), sub_canvas = Q('#sub_goban')
 const winrate_bar_canvas = Q('#winrate_bar'), winrate_graph_canvas = Q('#winrate_graph')
-const graph_overlay_canvas = Q('#graph_overlay')
+export const graph_overlay_canvas = Q('#graph_overlay')
 
 // renderer state
 const R = {
@@ -27,6 +31,12 @@ const R = {
     history_tags: [], endstate_clusters: [], prev_endstate_clusters: null,
     lizzie_style: false,
     window_id: -1,
+
+    show_endstate: null,
+    player_black: null,
+    player_white: null,
+    endstate_diff_interval: null,
+    trial: null,
 }
 let temporary_board_type = null, the_first_board_canvas = null
 let keyboard_moves = [], keyboard_tag_move_count = null
@@ -34,8 +44,7 @@ let hovered_move = null, hovered_move_count = null, hovered_board_canvas = null
 let the_showing_movenum_p = false, the_showing_endstate_value_p = false
 let thumbnails = []
 
-// drawer
-const D = require('./draw.js'); D.set_state(R)
+ D.set_state(R);
 
 // handler
 window.onload = window.onresize = update
@@ -74,6 +83,7 @@ function show_dialog(name) {
     Q(name).style.visibility = "visible"; Q(`${name} input`).select()
 }
 function hide_dialog() {
+    // @ts-ignore
     document.querySelectorAll(".dialog").forEach(d => d.style.visibility = "hidden")
 }
 
@@ -544,10 +554,13 @@ document.onkeydown = e => {
     // GROUP 1: for input forms
     const escape = (key === "Escape" || key === "C-[")
     escape && hide_dialog()
+    if (!(e.target instanceof HTMLElement))
+    return;
     switch (key === "Enter" && e.target.id) {
     case "auto_analysis_visits": toggle_auto_analyze(); return
     case "auto_play_sec": start_auto_play(); return
     }
+    // @ts-ignore
     if (e.target.tagName === "INPUT" && e.target.type !== "button") {
         escape && e.target.blur(); return
     }

@@ -5,7 +5,11 @@
 // npx electron src -j '{"leelaz_args": ["-g", "-w", "/foo/bar/network.gz"]}'
 // npx electron src -j /foo/bar/config.json
 
-require('./util.js').use(); require('./coord.js').use()
+import { move2idx } from "./coord"
+// modules
+import { create_game, create_game_from_sgf } from "./game"
+import * as P from "./powered_goban"
+import { aa2hash, aa_ref, aa_set, clip, debug_log, do_nothing, each_key_value, each_line, empty, flatten, mac_p, merge, seq, set_error_handler, to_s, truep, xor } from "./util"
 const PATH = require('path'), fs = require('fs')
 const default_path_for = name => PATH.join(__dirname, '..', 'external', name)
 
@@ -60,9 +64,6 @@ function update_debug_log() {debug_log(!!store.get(debug_log_key))}
 function toggle_debug_log() {debug_log(!!toggle_stored(debug_log_key))}
 update_debug_log()
 
-// modules
-const {create_game, create_game_from_sgf} = require('./game.js')
-const P = require('./powered_goban.js')
 
 // state
 let game = create_game()
@@ -78,7 +79,10 @@ let pausing = false, busy = false
 const stored_keys_for_renderer =
       ['lizzie_style', 'expand_winrate_bar', 'score_bar',
        'let_me_think', 'show_endstate']
-const R = {stones: game.current_stones(), bturn: true, ...renderer_preferences()}
+const R = {stones: game.current_stones(), bturn: true, suggest: null,
+    lizzie_style: null, expand_winrate_bar: null, score_bar: null,
+    let_me_think: null, show_endstate: null,
+    ...renderer_preferences()}
 P.initialize(R, {on_change: update_let_me_think, on_suggest: try_auto}, {
     // functions used in powered_goban.js
     render, update_state, update_ponder, show_suggest_p, is_pass,
@@ -736,7 +740,7 @@ const let_me_think_board_type =
       {first_half: 'double_boards_swap', latter_half: 'double_boards'}
 let let_me_think_previous_stage = null
 
-function update_let_me_think(only_when_stage_is_changed) {
+function update_let_me_think(only_when_stage_is_changed = false) {
     if (!let_me_think_p()) {let_me_think_previous_stage = null; return}
     let_me_think_switch_board_type(only_when_stage_is_changed)
 }
@@ -808,7 +812,7 @@ function cut_sequence() {
     push_deleted_sequence(game); delete_sequence()
 }
 function uncut_sequence() {
-    insert_before = (cut_first_p && sequence_cursor === 0)
+    let insert_before = (cut_first_p && sequence_cursor === 0)
     exist_deleted_sequence() &&
         insert_sequence(pop_deleted_sequence(), true, insert_before)
 }
@@ -833,7 +837,7 @@ function delete_sequence() {
 }
 function delete_sequence_internal() {sequence.splice(sequence_cursor, 1)}
 
-function insert_sequence(new_game, switch_to, before) {
+function insert_sequence(new_game, switch_to, before = false) {
     if (!new_game) {return}
     const f = switch_to ? switch_to_nth_sequence : goto_nth_sequence
     const n = sequence_cursor + (before ? 0 : 1)
@@ -932,7 +936,7 @@ function load_weight_file(weight_file) {
     return weight_file
 }
 function select_files(title) {
-    return files = dialog.showOpenDialog(null, {
+    return dialog.showOpenDialog(null, {
         properties: ['openFile'], title: title,
         defaultPath: option.weight_dir,
     }) || []
@@ -1055,7 +1059,7 @@ function sabaki_reader(line) {
 
 function attach_to_sabaki() {
     if (attached || !has_sabaki) {return}
-    const sgf_file = TMP.fileSync({mode: 0644, prefix: 'lizgoban-', postfix: '.sgf'})
+    const sgf_file = TMP.fileSync({mode: 0o0644, prefix: 'lizgoban-', postfix: '.sgf'})
     const sgf_text = game.to_sgf()
     fs.writeSync(sgf_file.fd, sgf_text)
     debug_log(`temporary file (${sgf_file.name}) for sabaki: ${sgf_text}`)

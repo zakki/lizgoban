@@ -5,21 +5,21 @@
 // move: "A19" = left top, "T19" = right top
 // sgfpos: "aa" = left top, "sa" = right top
 
-require('./util.js').use()
+import { to_i } from "./util"
 
 /////////////////////////////////////////////////
 // idx <=> move
 
 const col_name = 'ABCDEFGHJKLMNOPQRST'
-const board_size = col_name.length
+export const board_size = col_name.length
 const idx_pass = [-1, -1]
 
-function idx2move(i, j) {
+export function idx2move(i, j) {
     return (0 <= i) && (i < board_size) && (0 <= j) && (j < board_size) &&
         col_name[j] + (board_size - i)
 }
 
-function move2idx(move) {
+export function move2idx(move) {
     const m = move.match(/([A-HJ-T])((1[0-9])|[1-9])/), [dummy, col, row] = m || []
     return m ? [board_size - to_i(row), col_name.indexOf(col)] : idx_pass
 }
@@ -34,7 +34,7 @@ function translator_pair([from1, from2], [to1, to2]) {
     return [trans, inv]
 }
 
-function idx2coord_translator_pair(canvas, xmargin, ymargin, is_square) {
+export function idx2coord_translator_pair(canvas, xmargin, ymargin, is_square) {
     // u = j, v = i
     const [uv2xy, xy2uv] =
           uv2coord_translator_pair(canvas, [0, board_size - 1], [0, board_size - 1],
@@ -42,7 +42,7 @@ function idx2coord_translator_pair(canvas, xmargin, ymargin, is_square) {
     return [((i, j) => uv2xy(j, i)), ((x, y) => xy2uv(x, y).reverse())]
 }
 
-function uv2coord_translator_pair(canvas, u_min_max, v_min_max, xmargin, ymargin,
+export function uv2coord_translator_pair(canvas, u_min_max, v_min_max, xmargin, ymargin,
                                   is_square) {
     // u: horizontal, v: vertical
     let w = canvas.width, h = canvas.height
@@ -70,17 +70,12 @@ function sgfpos2idx(pos) {
     return [i, j]
 }
 
-function move2sgfpos(move) {
+export function move2sgfpos(move) {
     // pass = 'tt'
     const [i, j] = move2idx(move)
     return i >= 0 ? idx2sgfpos(i, j) : sgfpos_pass
 }
 
-function sgfpos2move(pos) {
+export function sgfpos2move(pos) {
     return idx2move(...sgfpos2idx(pos))
 }
-
-require('./globally.js').export_globally(module, {
-    idx2move, move2idx, idx2coord_translator_pair, uv2coord_translator_pair,
-    board_size, sgfpos2move, move2sgfpos,
-})
