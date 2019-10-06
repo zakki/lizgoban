@@ -27,7 +27,70 @@ import * as SGF_HELPER from "@sabaki/sgf/src/helper"
 let next_game_id = 0
 function new_game_id() {return next_game_id++}
 
-export function create_game(init_history?, init_prop?) {
+export interface IStone {
+    stone?: boolean;
+    black?: boolean;
+    last?: boolean;
+
+    // powered
+    tag?: string
+    next_move?: boolean;
+    next_is_black?: boolean;
+    move_count?: number;
+    recent?: boolean;
+    anytime_stones?: any[];
+    endstate?: number;
+    endstate_diff?: number;
+}
+export interface IHistory {
+    move: string;
+    is_black: boolean;
+    move_count: number;
+    b_winrate?: number;
+    tag?: string;
+
+    // powered
+    endstate?: any[][];
+    hotness?: number;
+    score_without_komi?: number;
+    suggest?: any;
+    visits?: number;
+}
+export interface IGame {
+    move_count: number;
+    player_black: string;
+    player_white: string;
+    sgf_file: string;
+    sgf_str: string;
+    id: number;
+    trial: boolean;
+    last_loaded_element: IHistory;
+
+    len: () => number;
+    is_empty: () => boolean;
+    ref: (mc: number) => IHistory;
+    ref_current: () => IHistory;
+    current_stones: () => IStone[][];
+    array_until: (mc: any) => any;
+    delete_future: () => void;
+    last_move: () => string;
+    set_last_loaded_element: () => void;
+    shallow_copy: () => IGame;
+    set_with_reuse: (new_history: IHistory[]) => void;
+    to_sgf: () => string;
+    load_sabaki_gametree: (gametree: any, index?: any) => boolean;
+    new_tag_maybe: (new_sequence_p: any, move_count: any) => string | false;
+    add_or_remove_tag: () => void;
+    push: (h: IHistory) => any;
+    pop: () => IHistory;
+
+    map<U>(callbackfn: (value: IHistory, index: number, array: ReadonlyArray<IHistory>) => U, thisArg?: any): U[];
+    forEach(callbackfn: (value: IHistory, index: number, array: ReadonlyArray<IHistory>) => void, thisArg?: any): void;
+    slice(start?: number, end?: number): IHistory[];
+}
+
+
+export function create_game(init_history?: IHistory[], init_prop?): IGame {
     const self: any = {};
     const history = init_history || []  // private
     const prop = init_prop || {  // public
@@ -70,12 +133,12 @@ export function create_game(init_history?, init_prop?) {
           aa2hash(['map', 'forEach', 'slice']
                   .map(meth => [meth, (...args) => history[meth](...args)]))
     return merge(self, prop, methods, array_methods)
-}
+ }
 
 /////////////////////////////////////////////////
 // SGF
 
-function game_to_sgf(game) {
+function game_to_sgf(game: IGame) {
     const f = (t, p) => `${t}[${SGF_HELPER.escapeString(p || '')}]`
     return `(;KM[7.5]${f('PW', game.player_white)}${f('PB', game.player_black)}` +
         game.map(({move: move, is_black: is_black}) =>

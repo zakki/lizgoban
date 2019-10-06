@@ -17,17 +17,35 @@ const category_spec = [
     {color: 'white', type: 'minor', ownership_range: [- minor_ownership, 0]},
 ]
 
+export interface IState {
+}
+
+export interface IGrid {
+    ownership: number;
+    id: number;
+}
+
+export interface IRegion {
+}
+
+export interface ICluster {
+    id: number;
+    color: number;
+    type: number;
+    ijs: Coordinate[];
+}
+
 //////////////////////////////////////
 // main
 
-export function endstate_clusters_for(endstate) {
+export function endstate_clusters_for(endstate: number[][]) {
     initialize()
-    const grid_for = z => ({ownership: z, id: null})
+    const grid_for = (z: number): IGrid => ({ownership: z, id: null})
     const grid = aa_map(endstate, grid_for)
     return flatten(category_spec.map((_, cat) => clusters_in_category(cat, grid)))
 }
 
-function clusters_in_category(category, grid) {
+function clusters_in_category(category: number, grid: IGrid[][]) {
     const {type} = category_spec[category]
     const region = region_for_category(category, grid)
     const clusters = clusters_in_region(region, grid, category)
@@ -36,18 +54,19 @@ function clusters_in_category(category, grid) {
     return ret.map(c => finalize_cluster(c, grid))
 }
 
-function region_for_category(category, grid) {
-    const region = [], ok = g => !truep(g.id) && in_category(category, g.ownership)
+function region_for_category(category: number, grid: IGrid[][]): Coordinate[] {
+    const region: Coordinate[] = []
+    const ok = g => !truep(g.id) && in_category(category, g.ownership)
     aa_each(grid, (g, i, j) => ok(g) && region.push([i, j]))
     return region
 }
 
-function in_category(category, ownership) {
+function in_category(category: number, ownership: number) {
     const {ownership_range: [a, b]} = category_spec[category]
     return a <= ownership && ownership < b
 }
 
-function divide_large_cluster(cluster, grid, category) {
+function divide_large_cluster(cluster: ICluster, grid: IGrid[][], category: number) {
     if (cluster.ijs.length < too_large_cluster_size) {return [cluster]}
     const region = cluster.ijs
     cancel_cluster(cluster, grid)
@@ -62,7 +81,7 @@ function divide_large_cluster(cluster, grid, category) {
     return [...core_clusters, ...corridor_clusters, ...rest_clusters]
 }
 
-function in_board_checker(grid) {return ([i, j]) => !!aa_ref(grid, i, j)}
+function in_board_checker(grid: IGrid[][]) {return ([i, j]) => !!aa_ref(grid, i, j)}
 
 let last_category_id = 0
 function initialize() {last_category_id = 0}
@@ -71,11 +90,11 @@ function new_cluster_id() {return ++last_category_id}
 //////////////////////////////////////
 // clustering
 
-function clusters_in_region(region, grid, category) {
+function clusters_in_region(region: Coordinate[], grid: IGrid[][], category: number) {
     return region.map(ij => cluster_from(ij, region, grid, category)).filter(truep)
 }
 
-function cluster_from([i, j], region, grid, category) {
+function cluster_from([i, j], region: Coordinate[], grid: IGrid[][], category: number) {
     if (truep(grid[i][j].id)) {return null}
     const {color, type} = category_spec[category], id = new_cluster_id()
     const state = {ijs: [], newcomers: [], region, id}
@@ -85,26 +104,26 @@ function cluster_from([i, j], region, grid, category) {
     return make_cluster(id, color, type, ijs)
 }
 
-function add_newcomer_maybe(ij: Coordinate, state, grid) {
+function add_newcomer_maybe(ij: Coordinate, state, grid: IGrid[][]) {
     const g = aa_ref(grid, ...ij)
     if (!g || truep(g.id) || !is_member(ij, state.region)) {return}
     state.ijs.push(ij); state.newcomers.push(ij); g.id = state.id
 }
 
-function search_around(ij, state, grid) {
+function search_around(ij: Coordinate, state, grid: IGrid[][]) {
     around_idx(ij).forEach(idx => add_newcomer_maybe(idx, state, grid))
 }
 
-function make_cluster(id, color, type, ijs) {
+function make_cluster(id, color, type, ijs: Coordinate[]): ICluster {
     return {id, color, type, ijs}
 }
 
-function finalize_cluster(cluster, grid) {
+function finalize_cluster(cluster: ICluster, grid: IGrid[][]) {
     const {id, ijs} = cluster, c = {...cluster}; delete c.ijs // for efficiency
     return {...c, ...cluster_characteristics(id, ijs, grid)}
 }
 
-function cluster_characteristics(id, ijs, grid) {
+function cluster_characteristics(id, ijs: Coordinate[], grid: IGrid[][]) {
     const sum = (v, w) => v.map((_, k) => v[k] + w[k]), zero = [0, 0, 0]
     const f = ([i, j]) => {const ow = grid[i][j].ownership; return [ow, i * ow, j * ow]}
     const [ownership_sum, i_sum, j_sum] = ijs.map(f).reduce(sum, zero)
@@ -113,7 +132,7 @@ function cluster_characteristics(id, ijs, grid) {
     return {ownership_sum, center_idx, boundary}
 }
 
-function boundary_of(id, ijs, grid) {
+function boundary_of(id, ijs: Coordinate[], grid: IGrid[][]) {
     const same_cluster_p = (idx: Coordinate) => (aa_ref(grid, ...idx) || {}).id === id
     const checker_for = ij =>
           (idx, direction) => same_cluster_p(idx) ? null : [ij, direction]
@@ -121,27 +140,27 @@ function boundary_of(id, ijs, grid) {
     return flatten(ijs.map(boundary_around))
 }
 
-function cancel_cluster(cluster, grid) {
+function cancel_cluster(cluster: ICluster, grid: IGrid[][]) {
     cluster.ijs.forEach(([i, j]) => (grid[i][j].id = null))
 }
 
 //////////////////////////////////////
 // separate corridors for "natural" clustering
 
-function core_in_region(region, radius, in_board) {
+function core_in_region(region, radius: number, in_board) {
     let core = region
     do_ntimes(radius, () => (core = erosion(core, in_board)))
     return core
 }
 
-function corridor_clusters_in(region, core, grid, category, corridor_radius) {
+function corridor_clusters_in(region, core, grid: IGrid[][], category: number, corridor_radius: number) {
     if (corridor_radius <=0) {return []}
     const corridors = corridors_in(region, core, grid, corridor_radius)
     const clusters = clusters_in_region(corridors, grid, category)
     return cancel_small_clusters(clusters, grid, too_small_corridor_cluster_size)
 }
 
-function cancel_small_clusters(clusters, grid, small_cluster_size) {
+function cancel_small_clusters(clusters: ICluster[], grid: IGrid[][], small_cluster_size: number) {
     const acceptable = c => c.ijs.length > small_cluster_size
     const inacceptable = c => !acceptable(c)
     const acceptable_clusters = clusters.filter(acceptable)
@@ -151,7 +170,7 @@ function cancel_small_clusters(clusters, grid, small_cluster_size) {
     return acceptable_clusters
 }
 
-function corridors_in(region, core, grid, corridor_radius) {
+function corridors_in(region, core, grid: IGrid[][], corridor_radius: number) {
     let dilated_core = core
     const dilate = () => (dilated_core = dilation(dilated_core, region))
     // "* 2" for recovering corners of rectangles
@@ -159,21 +178,23 @@ function corridors_in(region, core, grid, corridor_radius) {
     return region.filter(ij => !is_member(ij, dilated_core))
 }
 
-function erosion(region, in_board) {
-    const is_not_member = idx => in_board(idx) && !is_member(idx, region)
-    const is_inside = ij => !find_around(ij, is_not_member)
+function erosion(region: Coordinate[], in_board: ((idx: Coordinate) => boolean)) {
+    const is_not_member = (idx: Coordinate) => in_board(idx) && !is_member(idx, region)
+    const is_inside = (ij: Coordinate) => !find_around(ij, is_not_member)
     return region.filter(is_inside)
 }
 
-function dilation(region, limit_region) {
-    const is_in_region = idx => is_member(idx, region)
-    const is_in_closure = ij => is_in_region(ij) || find_around(ij, is_in_region)
+function dilation(region: Coordinate[], limit_region: Coordinate[]) {
+    const is_in_region = (idx: Coordinate) => is_member(idx, region)
+    const is_in_closure = (ij: Coordinate) => is_in_region(ij) || find_around(ij, is_in_region)
     return limit_region.filter(is_in_closure)
 }
 
-function find_around(idx, pred) {return around_idx(idx).find(pred)}
+function find_around(idx: Coordinate, pred: ((ij: Coordinate) => unknown)) {
+    return around_idx(idx).find(pred)
+}
 
-function is_member(idx, region) {
+function is_member(idx: Coordinate, region: Coordinate[]) {
     const eq = ([i1, j1], [i2, j2]) => (i1 === i2 && j1 === j2)
     return region.find(ij => eq(idx, ij))
 }
@@ -181,7 +202,7 @@ function is_member(idx, region) {
 //////////////////////////////////////
 // divide large areas by bottlenecks
 
-function core_clusters_in(region: Coordinate[], core, grid, category) {
+function core_clusters_in(region: Coordinate[], core, grid: IGrid[][], category: number) {
     const rest = region.filter(ij => !truep(aa_ref(grid, ...ij).id))
     const core_clusters = clusters_in_region(core, grid, category)
     inflate_clusters(core_clusters, rest, grid)
@@ -191,7 +212,7 @@ function core_clusters_in(region: Coordinate[], core, grid, category) {
     return survived_clusters
 }
 
-function inflate_clusters(clusters, region, grid) {
+function inflate_clusters(clusters, region: Coordinate[], grid: IGrid[][]) {
     const cluster_for = aa2hash(clusters.map(c => [c.id, c]))
     const id_at = (ij: Coordinate) => (aa_ref(grid, ...ij) || {}).id
     const fresh = ij => !truep(id_at(ij))

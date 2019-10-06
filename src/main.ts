@@ -7,7 +7,7 @@
 
 import { move2idx } from "./coord"
 // modules
-import { create_game, create_game_from_sgf } from "./game"
+import { create_game, create_game_from_sgf, IStone } from "./game"
 import * as P from "./powered_goban"
 import { aa2hash, aa_ref, aa_set, clip, debug_log, do_nothing, each_key_value, each_line, empty, flatten, mac_p, merge, seq, set_error_handler, to_s, truep, xor } from "./util"
 const PATH = require('path'), fs = require('fs')
@@ -80,8 +80,8 @@ const stored_keys_for_renderer =
       ['lizzie_style', 'expand_winrate_bar', 'score_bar',
        'let_me_think', 'show_endstate']
 const R: {
-    stones: any;
-    bturn: any;
+    stones: IStone[][];
+    bturn: boolean;
 	show_endstate?: any;
 	suggest?: any[];
 } = {stones: game.current_stones(), bturn: true, ...renderer_preferences()}
@@ -296,7 +296,7 @@ function update_state_to_move_count_tentatively(count) {
         stone: true, maybe: forward, maybe_empty: !forward, black: m.is_black
     }))
     const next_h = game.ref(game.move_count + 1)
-    const next_s = P.stone_for_history_elem(next_h, R.stones) || {}
+    const next_s = P.stone_for_history_elem(next_h, R.stones) || {} as IStone
     next_s.next_move = false; game.move_count = count; R.bturn = (count % 2 === 0)
     update_state()
 }

@@ -21,7 +21,7 @@ server.listen(port, function () {
 
 import { move2idx } from "./coord"
 // modules
-import { create_game, create_game_from_sgf } from "./game"
+import { create_game, create_game_from_sgf, IStone } from "./game"
 import * as P from "./powered_goban"
 import { aa2hash, aa_ref, aa_set, clip, debug_log, do_nothing, each_key_value, each_line, empty, flatten, mac_p, merge, seq, set_error_handler, to_s, truep, xor } from "./util"
 const PATH = require('path'), fs = require('fs')
@@ -96,8 +96,8 @@ const stored_keys_for_renderer =
     ['lizzie_style', 'expand_winrate_bar', 'score_bar',
         'let_me_think', 'show_endstate']
 const R: {
-    stones: any;
-    bturn: any;
+    stones: IStone[][];
+    bturn: boolean;
     show_endstate?: any;
     suggest?: any[];
 } = { stones: game.current_stones(), bturn: true, ...renderer_preferences() }
@@ -207,14 +207,6 @@ function window_for_id(window_id: number) {
 function get_windows() {
     return windows = windows.filter(win => !win.isDestroyed())
 }
-
-/*
-function get_new_window(file_name, opt?) {
-    const win = new electron.BrowserWindow(opt)
-    win.loadURL('file://' + __dirname + '/' + file_name)
-    return win
-}
-*/
 
 function new_window(socket: SocketIO.Socket, default_board_type) {
     const window_id = ++last_window_id
@@ -335,13 +327,13 @@ function redo_ntimes(n) { undo_ntimes(- n) }
 function undo_to_start() { undo_ntimes(Infinity) }
 function redo_to_end() { redo_ntimes(Infinity) }
 
-function goto_move_count(count) {
+function goto_move_count(count: number) {
     const c = clip(count, 0, game.len())
     if (c === game.move_count) { return }
     update_state_to_move_count_tentatively(c)
     P.set_board(game, c)
 }
-function update_state_to_move_count_tentatively(count) {
+function update_state_to_move_count_tentatively(count: number) {
     const forward = (count > game.move_count)
     const [from, to] = forward ? [game.move_count, count] : [count, game.move_count]
     const set_stone_at = (move, stone_array, stone) => {
@@ -530,7 +522,7 @@ function merge_option_and_restart(opts) {
 // another source of change: auto-analyze / auto-play
 
 // common
-function try_auto(force_next) {
+function try_auto(force_next: boolean) {
     auto_playing() ? try_auto_play(force_next) :
         auto_analyzing() ? try_auto_analyze(force_next) : do_nothing()
 }
@@ -542,20 +534,20 @@ function stop_auto() { stop_auto_analyze(); stop_auto_play(); update_ui() }
 function auto_analyzing_or_playing() { return auto_analyzing() || auto_playing() }
 
 // auto-analyze (redo after given visits)
-function try_auto_analyze(force_next) {
+function try_auto_analyze(force_next: boolean) {
     const done = force_next || (auto_analysis_progress() >= 1)
     const next = (pred, proc) => pred() ?
         proc() : (pause(), stop_auto_analyze(), update_ui())
     auto_bturn = xor(R.bturn, done)
     done && next(...(backward_auto_analysis_p() ? [undoable, undo] : [redoable, redo]) as [any, any])
 }
-function toggle_auto_analyze(visits) {
+function toggle_auto_analyze(visits: number) {
     if (game.is_empty()) { wink(); return }
     (auto_analysis_signed_visits === visits) ?
         (stop_auto_analyze(), update_ui()) :
         start_auto_analyze(visits)
 }
-function start_auto_analyze(visits) {
+function start_auto_analyze(visits: number) {
     auto_analysis_signed_visits = visits; rewind_maybe(); resume(); update_ui()
 }
 function stop_auto_analyze() { auto_analysis_signed_visits = Infinity }
@@ -581,7 +573,7 @@ function auto_play(sec, explicitly_playing_best) {
     auto_play_sec = sec || -1; stop_auto_analyze()
     update_auto_play_time(); update_let_me_think(); resume(); update_ui()
 }
-function try_auto_play(force_next) {
+function try_auto_play(force_next: boolean) {
     force_next && (last_auto_play_time = - Infinity)
     auto_play_ready() && (auto_replaying ? try_auto_replay() : try_play_best())
     update_let_me_think(true)

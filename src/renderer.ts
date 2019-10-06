@@ -11,6 +11,7 @@ import { board_size, idx2move, move2idx } from "./coord"
 // drawer
 import * as D from "./draw"
 import { aa_ref, clip, Coordinate, deferred_procs, do_nothing, each_key_value, empty, endstate_diff_tag_letter, identity, mac_p, merge, seq, start_moves_tag_letter, tag_letters, to_f, to_i, truep } from "./util"
+import { IStone } from "./game";
 
 //const current_window = getCurrentWindow()
 
@@ -21,7 +22,7 @@ export const graph_overlay_canvas = Q('#graph_overlay')
 
 // renderer state
 const R = {
-    stones: [], move_count: 0, bturn: true, history_length: 0, suggest: [], visits: 1,
+    stones: [] as IStone[][], move_count: 0, bturn: true, history_length: 0, suggest: [], visits: 1,
     visits_per_sec: 0,
     winrate_history: [], previous_suggest: null,
     attached: false, pausing: false, auto_analyzing: false, winrate_trail: false,

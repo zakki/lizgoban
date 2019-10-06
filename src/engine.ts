@@ -1,5 +1,11 @@
 import { array2hash, common_header_length, debug_log, deferred_procs, do_nothing, do_ntimes, each_line, empty, last, make_speedometer, set_error_handler, to_f, to_i, to_s, truep } from "./util"
+import { IHistory } from "./game"
 
+interface ITask {
+    command: string;
+    on_response?;
+    protect_p?: boolean;
+}
 
 export function create_leelaz () {
 
@@ -105,8 +111,8 @@ export function create_leelaz () {
           (arg.error_handler || arg.restart_handler)()
 
     // stateless wrapper of leelaz
-    let leelaz_previous_history = []
-    const set_board = (history) => {
+    let leelaz_previous_history: IHistory[] = []
+    const set_board = (history: IHistory[]) => {
         if (empty(history)) {clear_leelaz_board(); update_move_count([]); return}
         const beg = common_header_length(history, leelaz_previous_history)
         const back = leelaz_previous_history.length - beg
@@ -158,7 +164,7 @@ export function create_leelaz () {
 
     // task = {command: "play b D4", on_response: ok => {...}, protect_p: false}
 
-    const send_to_queue = task => {
+    const send_to_queue = (task: ITask) => {
         const remove = f => {
             command_queue = command_queue.filter(x => !f(x) || x.protect_p)
         }
@@ -190,7 +196,7 @@ export function create_leelaz () {
     const send_to_leelaz = (command, on_response) =>
           send_task_to_leelaz({command, on_response})
 
-    const update_move_count = history => {
+    const update_move_count = (history: IHistory[]) => {
         const new_state =
               {move_count: history.length, bturn: !(last(history) || {}).is_black}
         const dummy_command = `lizgoban_set ${JSON.stringify(new_state)}`
@@ -199,8 +205,8 @@ export function create_leelaz () {
     }
 
     const join_commands = (...a) => a.join(';')
-    const split_task = task => {
-        const ts = task.command.split(';').map(command => ({command}))
+    const split_task = (task: ITask) => {
+        const ts = task.command.split(';').map(command => ({command} as ITask))
         last(ts).on_response = task.on_response
         return ts
     }

@@ -8,17 +8,17 @@ export const to_s = x => (x + '')
 export const xor = (a, b) => (!a === !!b)
 export const truep = x => (x || x === 0 || x === '')
 export const do_nothing = () => {}
-export const identity = x => x
+export const identity = <T>(x: T) => x
 export const clip = (x: number, lower: number, upper?: number) =>
     Math.max(lower, Math.min(x, truep(upper) ? upper : Infinity))
 // export const sum = a => a.reduce((r,x) => r + x, 0)
 // export const clone = x => JSON.parse(JSON.stringify(x))
 export const merge = Object.assign
 export const empty = a => !a || (a.length === 0)
-export const last = a => a[a.length - 1]
-export const flatten = a => [].concat(...a)
-export const sort_by = (a, f) => a.slice().sort((x, y) => f(x) - f(y))
-export const num_sort = a => sort_by(a, identity)
+export const last = <T>(a: T[]) => a[a.length - 1]
+export const flatten = <T>(a: T[][]) => [].concat(...a)
+export const sort_by = <T>(a: T[], f) => a.slice().sort((x, y) => f(x) - f(y))
+export const num_sort = (a: number[]) => sort_by(a, identity)
 export const each_key_value = (h, f) => Object.keys(h).forEach(k => f(k, h[k]))
 export const array2hash = a => {
     const h = {} as any; a.forEach((x, i) => (i % 2 === 0) && (h[x] = a[i + 1])); return h
@@ -26,16 +26,19 @@ export const array2hash = a => {
 export const mac_p = () => (typeof process === 'object' && process.platform === 'darwin')
 
 // seq(3) = [ 0, 1, 2 ], seq(3, 5) = [ 5, 6, 7 ]
-export const seq = (n, from?) => [...Array(n)].map((_, i) => i + (from || 0))
-export const do_ntimes = (n, f) => seq(n).forEach(f)
+export const seq = (n: number, from?: number) => [...Array(n)].map((_, i) => i + (from || 0))
+export const do_ntimes = (n: number, f) => seq(n).forEach(f)
 
 // array of array
-export const aa_new = (m, n, f) => seq(m).map(i => seq(n).map(j => f(i, j)))
-export const aa_ref = (aa, i, j) => truep(i) && (i >= 0) && aa[i] && aa[i][j]
-export const aa_set = (aa, i, j, val) =>
+export const aa_new = <T>(m: number, n: number, f: ((i: number, j: number) => T)) =>
+    seq(m).map(i => seq(n).map(j => f(i, j)))
+export const aa_ref = <T>(aa: T[][], i: number, j: number) => truep(i) && (i >= 0) && aa[i] && aa[i][j]
+export const aa_set = <T>(aa: T[][], i: number, j: number, val: T) =>
     truep(i) && (i >= 0) && ((aa[i] = aa[i] || []), (aa[i][j] = val))
-export const aa_each = (aa, f) => aa.forEach((row, i) => row.forEach((s, j) => f(s, i, j)))
-export const aa_map = (aa, f) => aa.map((row, i) => row.map((s, j) => f(s, i, j)))
+export const aa_each = <T>(aa: T[][], f: (s: T, i: number, j: number) => unknown) =>
+    aa.forEach((row, i) => row.forEach((s, j) => f(s, i, j)))
+export const aa_map = <T, U>(aa: T[][], f: ((t: T, i: number, j: number) => U)) =>
+    aa.map((row, i) => row.map((s, j) => f(s, i, j)))
 export const aa2hash = aa => {const h = {}; aa.forEach(([k, v]) => h[k] = v); return h}
 export const around_idx_diff: Coordinate[] = [[1, 0], [0, 1], [-1, 0], [0, -1]]
 export const around_idx = ([i, j]: Coordinate) => {
@@ -44,7 +47,7 @@ export const around_idx = ([i, j]: Coordinate) => {
 }
 
 // str_uniq('zabcacd') = 'zabcd'
-export const str_uniq = str => [...new Set(str.split(''))].join('')
+export const str_uniq = (str: string) => [...new Set(str.split(''))].join('')
 
 let debug_log_p = false
 export const debug_log = (arg, limit_len?) => (typeof arg === 'boolean') ?
@@ -60,17 +63,17 @@ function do_debug_log(arg, limit_len) {
 // d_f(1,2,3) ==> f(1,2,3) is called after 200 ms
 // d_f(1,2,3) and then d_g(4,5) within 200 ms
 //   ==> f is cancelled and g(4,5) is called after 300 ms
-export const deferred_procs = (...proc_delay_pairs) => {
+export const deferred_procs = (...proc_delay_pairs: [Function, number][]) => {
     let timer
     return proc_delay_pairs.map(([proc, delay]) => ((...args) => {
         clearTimeout(timer); timer = setTimeout(() => proc(...args), delay)
     }))
 }
 
-export const make_speedometer = (interval_sec, premature_sec) => {
+export const make_speedometer = (interval_sec: number, premature_sec: number) => {
     let t0, k0, t1, k1  // t0 = origin, t1 = next origin
     const reset = () => {[t0, k0, t1, k1] = [Date.now(), NaN, null, null]}
-    const per_sec = k => {
+    const per_sec = (k: number) => {
         const t = Date.now(), ready = !isNaN(k0), dt_sec = () => (t - t0) / 1000
         !ready && (dt_sec() >= premature_sec) && ([t0, k0, t1, k1] = [t, k, t, k])
         ready && (t - t1 >= interval_sec * 1000) && ([t0, k0, t1, k1] = [t1, k1, t, k])
@@ -86,7 +89,7 @@ export const common_header_length = (a, b) => {
     const k = a.findIndex((x, i) => !eq(x, b[i] || {}))
     return (k >= 0) ? k : a.length
 }
-export const each_line = (f) => {
+export const each_line = (f: Function) => {
     let buf = ''
     return stream => {
         const a = stream.toString().split(/\r?\n/), rest = a.pop()

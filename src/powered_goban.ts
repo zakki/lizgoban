@@ -3,11 +3,11 @@
 // set_board() indirectly updates displayed board,
 // starts analysis of given game state, and updates displayed suggestions.
 
-import { endstate_clusters_for } from "./area"
+import { endstate_clusters_for, ICluster } from "./area"
 import { move2idx } from "./coord"
 // leelaz
 import { create_leelaz } from "./engine"
-import { create_game } from "./game"
+import { create_game, IHistory, IStone, IGame } from "./game"
 import { aa_each, aa_map, aa_ref, aa_set, clip, do_nothing, endstate_diff_tag_letter, flatten, merge, str_uniq, truep, xor } from "./util"
 const PATH = require('path')
 
@@ -18,7 +18,19 @@ let leelaz_for_white = null, leelaz_for_endstate = null
 let endstate_diff_interval = 12, endstate_diff_from = null, initial_b_winrate = NaN
 let game = create_game()  // dummy empty game until first set_board()
 const winrate_trail = true
-let R, on_change, on_suggest, M
+let R: {
+    endstate: any
+    endstate_move_count: number
+    stones: IStone[][]
+    score_without_komi: number
+    bturn: boolean
+    visits: number
+    move_count: number
+    prev_endstate_clusters: ICluster[]
+    show_endstate: boolean
+    suggest: any
+}
+let on_change, on_suggest, M
 
 /////////////////////////////////////////////////
 // basic
@@ -114,7 +126,8 @@ function endstate_handler(h) {
 const too_small_prior = 1e-3
 function suggest_handler(h) {
     const considerable = z => z.visits > 0 || z.prior >= too_small_prior
-    const mc = game.move_count, cur = game.ref(mc) || {}
+    const mc = game.move_count
+    const cur = game.ref(mc) || {} as IHistory
     h.suggest = h.suggest.filter(considerable)
     R.show_endstate && h.ownership &&
         ((cur.endstate = h.endstate = endstate_from_ownership(h.ownership)),
@@ -260,7 +273,7 @@ function start_endstate(leelaz_start_args, endstate_option) {
     leelaz_for_endstate.start(start_args)
     leelaz_for_endstate.set_pondering(false)
 }
-function add_endstate_to_stones(stones, endstate, update_diff_p = false) {
+function add_endstate_to_stones(stones: IStone[][], endstate, update_diff_p = false) {
     if (!endstate) {return}
     aa_each(stones, (s, i, j) => (s.endstate = endstate[i][j]))
     update_diff_p && update_endstate_diff()
@@ -283,7 +296,7 @@ function average_endstate_sum(move_count?) {
 function sum_of_endstate_change(move_count) {
     // delta = 2 for leelaz_for_endstate since it tends to oscillate
     let sum = 0, delta = katago_p() ? 1 : 2
-    const f = (cur, prev) =>
+    const f = (cur: number[][], prev: number[][]) =>
           (aa_each(cur, (c, i, j) => (sum += Math.abs(c - prev[i][j]))), true)
     return for_current_and_previous_endstate(move_count, 'endstate', delta, f) && sum
 }
@@ -354,7 +367,7 @@ function weight_info_text() {
           `${f(leelaz_for_black)} / ${f(leelaz_for_white)}` : f(leelaz)
     return engine_komi + weight_info
 }
-function add_next_mark_to_stones(stones, game, move_count) {
+function add_next_mark_to_stones(stones, game: IGame, move_count: number) {
     const h = game.ref(move_count + 1), s = stone_for_history_elem(h, stones)
     s && (s.next_move = true) && (s.next_is_black = h.is_black)
 }
@@ -379,7 +392,7 @@ function clear_info_in_stones(stones) {
                   'next_move', 'next_is_black']
     aa_each(stones, s => keys.forEach(key => {delete s[key]}))
 }
-export function stone_for_history_elem(h, stones) {
+export function stone_for_history_elem(h: IHistory, stones: IStone[][]) {
     return h && h.move && aa_ref(stones, ...move2idx(h.move))
 }
 function pick_properties(orig, keys) {
