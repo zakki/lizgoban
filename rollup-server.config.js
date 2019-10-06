@@ -2,16 +2,17 @@ import resolve from 'rollup-plugin-node-resolve';
 import commonjs from 'rollup-plugin-commonjs';
 
 module.exports = {
-  input: 'build/renderer.js',
+  input: 'build/server.js',
   output: {
-    file: 'public/renderer.js',
+    file: 'dist/server.js',
     name: "client",
-    format: 'iife'
+    format: 'cjs'
   },
+	/*
   plugins: [
     resolve(),
     commonjs({
       include: /node_modules\/@sabaki\/sgf/
     })
-  ]
+  ]*/
 };

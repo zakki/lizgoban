@@ -23,7 +23,7 @@ export const each_key_value = (h, f) => Object.keys(h).forEach(k => f(k, h[k]))
 export const array2hash = a => {
     const h = {} as any; a.forEach((x, i) => (i % 2 === 0) && (h[x] = a[i + 1])); return h
 }
-export const mac_p = () => (process.platform === 'darwin')
+export const mac_p = () => (typeof process === 'object' && process.platform === 'darwin')
 
 // seq(3) = [ 0, 1, 2 ], seq(3, 5) = [ 5, 6, 7 ]
 export const seq = (n, from?) => [...Array(n)].map((_, i) => i + (from || 0))

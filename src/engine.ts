@@ -10,7 +10,22 @@ export function create_leelaz () {
     const speedo_interval_sec = 3, speedo_premature_sec = 0.5
     const speedometer = make_speedometer(speedo_interval_sec, speedo_premature_sec)
 
-    let leelaz_process, arg, is_ready = false
+    let leelaz_process, is_ready = false
+    let arg: {
+        leelaz_command: string;
+        leelaz_args: string[];
+        analyze_interval_centisec;
+        wait_for_startup;
+        weight_file: string;
+        komi: number;
+        minimum_suggested_moves;
+        engine_log_line_length
+        ready_handler;
+        endstate_handler;
+        suggest_handler;
+        restart_handler;
+        error_handler;
+    }
     let command_queue, last_command_id, last_response_id, pondering = true
     let on_response_for_id = {}
     let network_size_text = ''

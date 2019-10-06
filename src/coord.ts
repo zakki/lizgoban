@@ -19,8 +19,9 @@ export function idx2move(i, j) {
         col_name[j] + (board_size - i)
 }
 
-export function move2idx(move): Coordinate {
-    const m = move.match(/([A-HJ-T])((1[0-9])|[1-9])/), [dummy, col, row] = m || []
+export function move2idx(move: string): Coordinate {
+    const m = move.match(/([A-HJ-T])((1[0-9])|[1-9])/)
+    const [dummy, col, row] = m || []
     return m ? [board_size - to_i(row), col_name.indexOf(col)] : idx_pass
 }
 
