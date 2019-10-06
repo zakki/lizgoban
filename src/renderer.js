@@ -69,6 +69,7 @@ function send_to_leelaz(cmd) {main('send_to_leelaz', cmd)}
 function toggle_auto_analyze() {
     main('toggle_auto_analyze', auto_analysis_visits_setting())
 }
+window["toggle_auto_analyze"] = toggle_auto_analyze;
 function toggle_auto_analyze_visits() {
     R.auto_analyzing ? main('stop_auto') : Q('#auto_analysis_visits').select()
 }
@@ -79,6 +80,7 @@ function auto_analysis_visits_setting () {
 function start_auto_play() {
     main('auto_play', to_f(Q('#auto_play_sec').value)); hide_dialog()
 }
+window["start_auto_play"] = start_auto_play;
 
 function show_dialog(name) {
     Q(name).style.visibility = "visible"; Q(`${name} input`).select()
@@ -94,6 +96,7 @@ function play_moves(moves) {
 }
 
 function main(channel, ...args) {ipc.send(channel, ...args)}
+window["main"] = main
 
 /////////////////////////////////////////////////
 // from main
