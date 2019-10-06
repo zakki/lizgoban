@@ -1,7 +1,9 @@
 import { move2sgfpos, sgfpos2move } from "./coord"
 import { stones_from_history } from "./rule"
 import { aa2hash, common_header_length, empty, last, last_loaded_element_tag_letter, merge, normal_tag_letters } from "./util"
-const SGF = require('@sabaki/sgf')
+//const SGF = require('@sabaki/sgf')
+import * as SGF from "@sabaki/sgf/src/parse"
+import * as SGF_HELPER from "@sabaki/sgf/src/helper"
 
 /////////////////////////////////////////////////
 // game
@@ -74,7 +76,7 @@ export function create_game(init_history?, init_prop?) {
 // SGF
 
 function game_to_sgf(game) {
-    const f = (t, p) => `${t}[${SGF.escapeString(p || '')}]`
+    const f = (t, p) => `${t}[${SGF_HELPER.escapeString(p || '')}]`
     return `(;KM[7.5]${f('PW', game.player_white)}${f('PB', game.player_black)}` +
         game.map(({move: move, is_black: is_black}) =>
                  (is_black ? ';B[' : ';W[') + move2sgfpos(move) + ']').join('') +
