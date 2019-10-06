@@ -5,13 +5,14 @@
 
 // util
 function Q(x) {return document.querySelector(x)}
-const electron = require('electron'), ipc = electron.ipcRenderer
+//const electron = require('electron'), ipc = electron.ipcRenderer
+import { setTitle, ipc } from "./client-browser";
 import { board_size, idx2move, move2idx } from "./coord"
 // drawer
 import * as D from "./draw"
 import { aa_ref, clip, deferred_procs, do_nothing, each_key_value, empty, endstate_diff_tag_letter, identity, mac_p, merge, seq, start_moves_tag_letter, tag_letters, to_f, to_i, truep, each_value } from "./util"
 
-const current_window = electron.remote.getCurrentWindow()
+//const current_window = getCurrentWindow()
 
 // canvas
 const main_canvas = Q('#goban'), sub_canvas = Q('#sub_goban')
@@ -64,7 +65,7 @@ function send_to_leelaz(cmd) {main('send_to_leelaz', cmd)}
 /////////////////////////////////////////////////
 // action
 
-function new_window() {main('new_window', R.board_type === 'suggest' ? 'variation' : 'suggest')}
+//function new_window() {main('new_window', R.board_type === 'suggest' ? 'variation' : 'suggest')}
 function toggle_auto_analyze() {
     main('toggle_auto_analyze', auto_analysis_visits_setting())
 }
@@ -97,7 +98,7 @@ function main(channel, ...args) {ipc.send(channel, ...args)}
 /////////////////////////////////////////////////
 // from main
 
-ipc.on('render', (e, h, is_board_changed) => {
+ipc.on('render', (h, is_board_changed) => {
     if (showing_until() && !is_board_changed) {return}  // for smooth reaction
     merge(R, h)
     setq('#move_count', R.move_count)
@@ -106,7 +107,7 @@ ipc.on('render', (e, h, is_board_changed) => {
     update_goban()
 })
 
-ipc.on('update_ui', (e, win_prop, availability, ui_only) => {
+ipc.on('update_ui', (win_prop, availability, ui_only) => {
     R.pausing = availability.resume
     R.auto_analyzing = availability.stop_auto
     merge(R, win_prop)
@@ -120,10 +121,10 @@ ipc.on('update_ui', (e, win_prop, availability, ui_only) => {
     try_thumbnail()
 })
 
-ipc.on('ask_auto_play_sec', (e) => show_dialog('#auto_play_sec_dialog'))
+ipc.on('ask_auto_play_sec', () => show_dialog('#auto_play_sec_dialog'))
 
-ipc.on('slide_in', (e, direction) => slide_in(direction))
-ipc.on('wink', (e) => wink())
+ipc.on('slide_in', (direction) => slide_in(direction))
+ipc.on('wink', () => wink())
 
 let last_title = ''
 function update_title() {
@@ -133,7 +134,7 @@ function update_title() {
     const tags = current_tag_letters()
     const tag_text = tags ? `[${tags}]` : ''
     const title = `LizGoban ${names} ${tag_text} ${R.weight_info || ''}`
-    if (title !== last_title) {current_window.setTitle(title); last_title = title}
+    if (title !== last_title) {setTitle(title); last_title = title}
 }
 
 function current_tag_letters() {
