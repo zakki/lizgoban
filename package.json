@@ -3,10 +3,12 @@
   "version": "0.0.1pre1",
   "license": "GPL-3.0",
   "scripts": {
-    "build": "npm run compile && npm run bundle && npm run copy",
-    "copy": "cp src/*.html src/*.png public",
+    "build": "npm run compile && npm run bundle && npm run copy-electron && npm run copy-browser",
+    "prepare": "mkdir dist public",
+    "copy-electron": "cp src/*.html src/*.png src/*.json dist",
+    "copy-browser": "cp src/*.png public && cp src/browser.html public/index.html",
     "compile": "tsc -p .",
-    "bundle": "rollup --config rollup.config.js && rollup --config rollup-server.config.js"
+    "bundle": "rollup --config rollup-browser-renderer.config.js && rollup --config rollup-browser-server.config.js && rollup --config rollup-electron-main.config.js && rollup --config rollup-electron-renderer.config.js"
   },
   "repository": {
     "type": "git",
