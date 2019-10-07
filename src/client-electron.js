@@ -9,7 +9,7 @@ export function setTitle(title) {
 
 export let ipc = {
     on: function(channel, f) {
-        ipcRenderer.on(channel, f);
+        ipcRenderer.on(channel, (e, ...args) => f(...args));
     },
     send: function(channel, ...args) {
         ipcRenderer.send(channel, ...args);

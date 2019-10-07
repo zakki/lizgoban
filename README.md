@@ -57,15 +57,21 @@ Otherwise, read the following instructions.
 1. Install [Node.js](https://nodejs.org/).
 2. Type "git clone https://github.com/kaorahi/lizgoban; cd lizgoban; npm install".
 3. Put Leela Zero binary (version 0.17 or later) as "external/leelaz" together with its network weight as "external/network.gz".
-4. Type "npx electron src". (Windows: Double-click lizgoban_windows.vbs.)
+4. Type "npm run build".
+5. Type "npx electron dist". (Windows: Double-click lizgoban_windows.vbs.)
+
+### To use server mode
+
+1. Type "node serv/server.js"
+2. Open "http://localhost:3000" using web browser.
 
 ### To set options for leelaz (experimental):
 
-    npx electron src -j '{"leelaz_args": ["-g", "-w", "/foo/bar/network.gz"]}'
+    npx electron dist -j '{"leelaz_args": ["-g", "-w", "/foo/bar/network.gz"]}'
 
 or
 
-    npx electron src -c config.json
+    npx electron dist -c config.json
 
 with the file config.json:
 
