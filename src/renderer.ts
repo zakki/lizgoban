@@ -98,6 +98,11 @@ function play_moves(moves) {
 function main(channel, ...args) {ipc.send(channel, ...args)}
 window["main"] = main
 
+function toggele_lizzie_style() {
+    R.lizzie_style = !R.lizzie_style;
+}
+window["toggele_lizzie_style"] = toggele_lizzie_style;
+
 /////////////////////////////////////////////////
 // from main
 
