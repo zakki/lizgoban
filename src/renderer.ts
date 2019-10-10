@@ -603,7 +603,7 @@ document.onkeydown = e => {
           truep(steps) ? m('play_best', steps) :
           !empty(R.suggest) ? m('play', R.suggest[0].move, another_board) : false
     switch (!R.attached && key) {
-    case "C-v": m('paste_sgf_from_clipboard'); break;
+    case "C-v": paste_sgf_from_clipboard(); break;
     case "C-x": m('cut_sequence'); break;
     case "C-w": m('close_window_or_cut_sequence'); break;
     case "[": m('previous_sequence'); break;
@@ -673,6 +673,32 @@ function showing_until(canvas?) {
 function update_showing_until() {
     R.show_endstate && main('set_endstate_diff_from', showing_until())
 }
+
+function paste_sgf_from_clipboard() {
+    navigator.clipboard.readText().then(sgf_str => {
+        main('load_sgf', sgf_str);
+    });
+}
+
+window.ondragover = (ev: DragEvent) => {
+    ev.preventDefault();
+    if (ev.dataTransfer.files) {
+        ev.dataTransfer.dropEffect = "copy";
+    }
+}
+
+window.ondrop = (ev: DragEvent) => {
+    ev.preventDefault();
+    if (ev.dataTransfer.files) {
+        const file = ev.dataTransfer.files[0];
+        const  fileReader = new FileReader();
+        fileReader.onload = function(event) {
+            main('load_sgf', event.target.result);
+        }
+        fileReader.readAsText(file);
+    }
+}
+
 
 /////////////////////////////////////////////////
 // controller

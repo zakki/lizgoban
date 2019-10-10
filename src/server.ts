@@ -8,9 +8,6 @@ const port = process.env.PORT || 3000
 exapp.use(express.static('public'))
 
 io.on('connection', function (socket) {
-    socket.on('chat message', function (msg) {
-        io.emit('chat message', msg)
-    });
     new_window(socket, 'double_boards')
 });
 
@@ -276,6 +273,7 @@ const api = merge({}, simple_api, {
     let_me_think_next,
     goto_move_count, toggle_auto_analyze, play_best, play_weak, auto_play, stop_auto,
     //paste_sgf_from_clipboard, open_sgf, save_sgf,
+    load_sgf,
     next_sequence, previous_sequence, nth_sequence, cut_sequence, duplicate_sequence,
     //help,
     // for debug
@@ -1070,13 +1068,16 @@ function save_sgf() {
     })
     f && fs.writeFile(f, game.to_sgf(), err => {if (err) throw err})
 }
-
-function read_sgf(sgf_str) {
-    const new_game = create_game_from_sgf(sgf_str)
-    new_game ? backup_and_replace_game(new_game) :
-        dialog.showErrorBox("Failed to read SGF", 'SGF text: "' + sgf_str + '"')
-}
 */
+
+function load_sgf(sgf_str) {
+    const new_game = create_game_from_sgf(sgf_str)
+    if (new_game) {
+        backup_and_replace_game(new_game);
+    } else {
+        //dialog.showErrorBox("Failed to read SGF", 'SGF text: "' + sgf_str + '"')
+    }
+}
 
 /////////////////////////////////////////////////
 // Sabaki gameTree
