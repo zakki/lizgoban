@@ -6,7 +6,7 @@
     "build": "npm run compile && npm run bundle && npm run copy-electron && npm run copy-browser",
     "prepare": "mkdir dist public",
     "copy-electron": "cp src/*.html src/*.png src/*.json dist",
-    "copy-browser": "cp src/*.png public && cp src/browser.html public/index.html",
+    "copy-browser": "cp src/*.png src/help.html public && cp src/browser.html public/index.html",
     "compile": "tsc -p .",
     "bundle": "rollup --config rollup-browser-renderer.config.js && rollup --config rollup-browser-server.config.js && rollup --config rollup-electron-main.config.js && rollup --config rollup-electron-renderer.config.js"
   },

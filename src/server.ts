@@ -95,7 +95,7 @@ const stored_keys_for_renderer =
 const R: {
     stones: IStone[][];
     bturn: boolean;
-    show_endstate?: any;
+    show_endstate?: boolean;
     suggest?: any[];
 } = { stones: game.current_stones(), bturn: true, ...renderer_preferences() }
 P.initialize(R, { on_change: update_let_me_think, on_suggest: try_auto }, {
@@ -276,8 +276,9 @@ const api = merge({}, simple_api, {
     load_sgf,
     next_sequence, previous_sequence, nth_sequence, cut_sequence, duplicate_sequence,
     //help,
+	new_empty_board, new_handicap_board,
     // for debug
-    send_to_leelaz: P.send_to_leelaz,
+    //send_to_leelaz: P.send_to_leelaz,
 })
 
 function api_handler(channel, handler, busy = false) {
@@ -693,6 +694,13 @@ function add_handicap_stones(k) {
     const moves = pos.slice(0, k)
     exceptions.includes(k) && (moves[k - 1] = center)
     moves.forEach(m => do_play(m, true))
+}
+function new_handicap_board(k: number) {
+    k = k | 0
+    if (k < 2 || k > 9)
+	 return
+    game.is_empty() || new_empty_board()
+	add_handicap_stones(k)
 }
 /*
 function ask_handicap_stones() {

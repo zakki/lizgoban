@@ -9,6 +9,7 @@
  <style type="text/css">
  * {margin : 0; padding: 0;}
  body {white-space: nowrap;}
+ main {width: 100%; height:100%}
  input, select {font-size: 100%;}
  .controller_row {margin-top: 2%; white-space: normal; text-align: left;}
  .small {font-size: 70%;}
@@ -37,16 +38,16 @@
  }
  .close_button {position: absolute; top: 0px; right: 0px;}
  @media (max-aspect-ratio: 13/10) {
-  body > * {width: 96vmin; display: block; margin: 1.5vmin; font-size: 3vw;}
+  .main > * {width: 96vmin; display: block; margin: 1.5vmin; font-size: 3vw;}
   #graph_overlay {position: absolute;}
   .thumbbox {display: inline-block;}
   .thumbbox img {width: 3vw; height: 3vw;}
   #visits_trail_canvas {display: none;}
  }
  @media (min-aspect-ratio: 13/10) {
-  body {display: table; text-align: center;}
-  body > * {margin-top: 1.5vmin; vertical-align: top;}
-  #main_div {width: 96vmin; display: inline-block; position: fixed;}
+  .main {display: table; text-align: center;}
+  .main > * {margin-top: 1.5vmin; vertical-align: top;}
+  #main_div {width: calc(96vmin - 54px); display: inline-block; position: fixed;}
   #rest_div {
    width: calc(96vw - 100vh); display: inline-block; position: fixed; right: 0;
    font-size: calc((96vw - 96vh) * 3/100);
@@ -61,7 +62,7 @@
   .thumbbox:nth-child(n+2) {padding-top: 3px;}
   .thumbbox {padding-bottom: 3px;}
   .thumbbox * {padding: 0;}
-  #thumbnails {height: 100vh;}
+  #thumbnails {height: calc(100vh - 54px);}
   #thumbnails[data-style='block'] {overflow-y: visible;}
   #thumbnails[data-style='block'] .thumbbox img {width: 4.5vw; height: 4.5vw;}
   #thumbnails[data-style='block'] .thumbbox:before {
@@ -81,6 +82,59 @@
   #visits_trail_canvas {
    position: fixed; right: 1vw; bottom: 1vh; width: 10vw; height: 10vh; z-index: -9;
   }
+
+ /* menu */
+ /* see https://www.w3schools.com/css/css_dropdowns.asp */
+ .menu ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #333;
+ }
+
+ .menu li {
+  float: left;
+ }
+
+ .menu li a, .menu .dropbtn {
+  display: inline-block;
+  color: white;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+ }
+
+ .menu li a:hover, .menu > .dropdown:hover .dropbtn {
+  background-color: red;
+ }
+
+ .menu li.dropdown {
+  display: inline-block;
+ }
+
+ .menu .dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+ }
+
+ .menu .dropdown-content a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  text-align: left;
+ }
+
+ .menu .dropdown-content a:hover {background-color: #f1f1f1;}
+
+ .menu .dropdown:hover .dropdown-content {
+  display: block;
+ }
  </style>
  <style type="text/css">
  .ext {color: #a38360; text-decoration: underline; cursor: pointer;}
@@ -91,7 +145,118 @@
 </head>
 
 <body id="body">
-
+<div class="menu">
+<ul>
+  <li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">File</a>
+    <div class="dropdown-content">
+      <a href="javascript:new_empty_board()">New empty board</a>
+      <a href="javascript:ask_handicap_stones()">New handicap game</a>
+<!--
+      <a href="javascript:menu_">New window
+        (this_item, win) => new_window(window_prop(win).board_type === 'suggest' ?
+        'variation' : 'suggest'))</a>
+-->
+      <hr>
+      <a href="javascript:document.querySelector('#sgffile').click()">Open SGF...</a>
+	  <!--
+	  <a href="javascript:save_sgf_file()">Save SGF...</a>
+	  <hr>
+	  <a href="javascript:menu_restart()">Reset</a>
+      -->
+		  <!--
+        lz_white ?
+            item('Load weights for black', 'Shift+L', load_leelaz_for_black) :
+            item('Load network weights', 'Shift+L', load_weight),
+        item('Load engine', undefined, load_engine),
+        sep,
+        item('Close', undefined, (this_item, win) => win.close()),
+        item('Quit', undefined, app.quit),
+			-->
+  </li>
+  <li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Edit</a>
+    <div class="dropdown-content">
+	  <!--
+      <a href="javascript:menu_copy_sgf_to_clipboard()">Copy SGF</a>
+      <a href="javascript:menu_paste_sgf_from_clipboard()">Paste SGF</a>
+	  <hr>
+      -->
+	  <a href="javascript:main('cut_sequence')">Delete board</a>
+	  <!--
+	  <a href="javascript:menu_exist_deleted_sequence() && uncut_sequence()">Undelete board</a>
+      -->
+	  <a href="javascript:main('duplicate_sequence', false, true)">Duplicate board</a>
+	  <a href="javascript:main('duplicate_sequence', true, true)">Duplicate until current move</a>
+	  <!--
+	  <hr>
+	  <a href="javascript:menu_toggle_trial()">Trial board</a>
+      -->
+    </div>
+  </li>
+  <li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">View</a>
+    <div class="dropdown-content">
+      <a href="javascript:toggle_board_type('double_boards')">Two boards A (main+PV)</a>
+      <a href="javascript:toggle_board_type('double_boards_raw')">Two boards B (main+raw)</a>
+      <a href="javascript:toggle_board_type('double_boards_swap')">Two boards C (raw+sub)</a>
+	  <a href="javascript:toggle_board_type('double_boards_raw_pv')">Two boards D (raw+PV)</a>
+	  <a href="javascript:toggle_board_type('suggest')">Suggestions</a>
+	  <a href="javascript:toggle_board_type('variation')">Principal variation</a>
+	  <a href="javascript:toggle_board_type('raw')">Raw board</a>
+	  <a href="javascript:toggle_board_type('winrate_only')">Winrate graph</a>
+	  <hr>
+	  <a href="javascript:main('toggle_let_me_think')">Let me think first</a>
+	  <hr>
+	  <a href="javascript:toggele_lizzie_style()">Lizzie style</a>
+	  <a href="javascript:toggle_expand_winrate_bar()">Expand winrate bar</a>
+      <!--...insert_if(P.katago_p(),-->
+	  <a href="javascript:toggle_score_bar()">Score bar</a>
+      <!--...insert_if(P.leelaz_for_endstate_p(),-->
+	  <hr>
+	  <a href="javascript:toggle_show_endstate()">Endstate<!-- (diff: ${P.get_endstate_diff_interval()} moves)--></a>
+	  <!--
+	  <a href="javascript:menu_endstate_diff_interval_adder(1)">...longer diff</a>
+	  <a href="javascript:menu_endstate_diff_interval_adder(-1)">...shorter diff</a>
+	  -->
+    </div>
+  </li>
+  <!--
+  <li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Tool</a>
+    <div class="dropdown-content">
+      <a href="javascript:menu_ask_sec(true)">Auto replay</a>
+      <a href="javascript:menu_ask_sec(false)">Self play</a>
+      <a href="javascript:menu_skip_auto()">...Skip to next</a>
+      <hr>
+      <a href="javascript:menu_">{label: 'Alternative weights for white', accelerator: 'CmdOrCtrl+Shift+L',
+         type: 'checkbox', checked: lz_white,
+         click: stop_auto_and(lz_white ?
+          P.unload_leelaz_for_white : load_leelaz_for_white)},
+        lz_white ?
+            item('Swap black/white weights', 'Shift+S',
+                 P.swap_leelaz_for_black_and_white) :
+            item('Switch to previous weights', 'Shift+S',
+                 switch_to_previous_weight, false, !!previous_weight_file),
+        sep,
+        ...insert_if(P.support_komi_p(),
+      <a href="javascript:menu_ask_engine_komi()">Komi (${P.get_engine_komi()})</a>
+	  <a href="javascript:menu_tag_or_untag()">Tag / Untag</a>
+	  <a href="javascript:menu_">has_sabaki && {label: 'Attach Sabaki', type: 'checkbox', checked: attached,
+        accelerator: 'CmdOrCtrl+T', click: toggle_sabaki},</a>
+	  <a href="javascript:menu_">item('Info', 'CmdOrCtrl+I', info),</a>
+    </div>
+  </li>
+  -->
+  <li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Help</a>
+    <div class="dropdown-content">
+      <a href="help.html" target="_blank">Help</a>
+    </div>
+  </li>
+</ul>
+</div>
+<div class="main">
 <div id="thumb_aligner"><div id="thumbnails"><div id="thumb_height_measurer">
 </div></div></div>
 
@@ -178,6 +343,7 @@
 </div>
 
 <canvas id="graph_overlay"></canvas>
-
+</div>
+<input style="display:none" type="file" id="sgffile" name="sgffile"/>
 </body>
 </html>

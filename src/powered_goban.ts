@@ -15,7 +15,9 @@ let leelaz = create_leelaz(), leelaz_for_black = leelaz
 let leelaz_for_white = null, leelaz_for_endstate = null
 
 // state
-let endstate_diff_interval = 12, endstate_diff_from = null, initial_b_winrate = NaN
+let endstate_diff_interval = 12
+let endstate_diff_from: number = null
+let initial_b_winrate = NaN
 let game = create_game()  // dummy empty game until first set_board()
 const winrate_trail = true
 let R: {
@@ -129,7 +131,7 @@ function suggest_handler(h) {
     const mc = game.move_count
     const cur = game.ref(mc) || {} as IHistory
     h.suggest = h.suggest.filter(considerable)
-    R.show_endstate && h.ownership &&
+    /*R.show_endstate &&*/ h.ownership &&
         ((cur.endstate = h.endstate = endstate_from_ownership(h.ownership)),
          (cur.hotness = sum_of_endstate_change(game.move_count)),
          (cur.score_without_komi = h.score_without_komi),
@@ -254,7 +256,7 @@ export function add_endstate_diff_interval(k) {
         update_info_in_stones()  // update "recent stone" marks
     })
 }
-export function set_endstate_diff_from(k) {
+export function set_endstate_diff_from(k: number) {
     change_endstate_diff_target(() => {endstate_diff_from = k})
 }
 function change_endstate_diff_target(proc) {

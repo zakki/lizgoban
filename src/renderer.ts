@@ -53,7 +53,7 @@ export interface IRendererState {
     prev_endstate_clusters: any;
     lizzie_style: boolean;
     window_id: number;
-    show_endstate: any;
+    show_endstate: boolean;
     player_black: string;
     player_white: string;
     endstate_diff_interval: any;
@@ -76,10 +76,10 @@ export const R: IRendererState = {
     lizzie_style: false,
     window_id: -1,
 
-    show_endstate: null,
+    show_endstate: null as boolean,
     player_black: null as string,
     player_white: null as string,
-    endstate_diff_interval: null,
+    endstate_diff_interval: null as number,
     trial: null,
 }
 let temporary_board_type = null, the_first_board_canvas = null
@@ -143,7 +143,42 @@ window["main"] = main
 function toggele_lizzie_style() {
     R.lizzie_style = !R.lizzie_style;
 }
-window["toggele_lizzie_style"] = toggele_lizzie_style;
+window["toggele_lizzie_style"] = toggele_lizzie_style
+
+function toggle_expand_winrate_bar() {
+    R.expand_winrate_bar = !R.expand_winrate_bar
+	update()
+}
+window['toggle_expand_winrate_bar'] = toggle_expand_winrate_bar
+
+function toggle_show_endstate() {
+    R.show_endstate = !R.show_endstate
+}
+window['toggle_show_endstate'] = toggle_show_endstate
+
+function toggle_score_bar() {
+    R.score_bar = !R.score_bar
+}
+window['toggle_score_bar'] = toggle_score_bar
+
+function new_empty_board() {
+    main('new_empty_board')
+}
+window['new_empty_board'] = new_empty_board
+
+function ask_handicap_stones() {
+    let s = window.prompt("Handicap stones", "2")
+	let k = Number.parseInt(s)
+	if (!k) return
+	if (k < 2 || k > 9)
+	    alert("Unsupported handicap stone")
+    main('new_handicap_board', k)
+}
+window['ask_handicap_stones'] = ask_handicap_stones
+
+function save_sgf_file() {
+}
+window['save_sgf_file'] = save_sgf_file
 
 /////////////////////////////////////////////////
 // from main
@@ -315,6 +350,7 @@ function set_temporary_board_type(btype, btype2?) {
 }
 
 function toggle_board_type(type) {main('toggle_board_type', R.window_id, type)}
+window["toggle_board_type"] = toggle_board_type;
 
 function double_boards_p() {return R.board_type.match(/^double_boards/)}
 
@@ -734,17 +770,27 @@ window.ondragover = (ev: DragEvent) => {
     }
 }
 
+function read_sgf_file(file: File) {
+    const fileReader = new FileReader();
+    fileReader.onload = function(event) {
+        main('load_sgf', event.target.result);
+    }
+    fileReader.readAsText(file);
+}
+
 window.ondrop = (ev: DragEvent) => {
-    ev.preventDefault();
+    ev.preventDefault()
     if (ev.dataTransfer.files) {
-        const file = ev.dataTransfer.files[0];
-        const  fileReader = new FileReader();
-        fileReader.onload = function(event) {
-            main('load_sgf', event.target.result);
-        }
-        fileReader.readAsText(file);
+        read_sgf_file(ev.dataTransfer.files[0])
     }
 }
+
+function handleFileSelect(evt) {
+    var files = evt.target.files
+    read_sgf_file(files[0])
+}
+
+Q('#sgffile').onchange = handleFileSelect
 
 
 /////////////////////////////////////////////////
