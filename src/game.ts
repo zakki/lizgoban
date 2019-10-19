@@ -42,6 +42,17 @@ export interface IStone {
     endstate?: number;
     endstate_diff?: number;
 }
+
+export interface ISuggest {
+    move: string;
+    visits: number;
+    winrate: number;
+    bturn: boolean;
+    pv: string[];
+    prior: number;
+    searched: number;
+}
+
 export interface IHistory {
     move: string;
     is_black: boolean;
@@ -53,9 +64,10 @@ export interface IHistory {
     endstate?: any[][];
     hotness?: number;
     score_without_komi?: number;
-    suggest?: any;
+    suggest?: ISuggest[];
     visits?: number;
 }
+
 export interface IGame {
     move_count: number;
     player_black: string;

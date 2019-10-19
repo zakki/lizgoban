@@ -19,7 +19,7 @@ let endstate_diff_interval = 12, endstate_diff_from = null, initial_b_winrate = 
 let game = create_game()  // dummy empty game until first set_board()
 const winrate_trail = true
 let R: {
-    endstate: any
+    endstate: number[]
     endstate_move_count: number
     stones: IStone[][]
     score_without_komi: number
@@ -341,7 +341,7 @@ function winrate_from_game(game) {
     })
 }
 
-function winrate_suggested(move_count) {
+function winrate_suggested(move_count: number) {
     const {move, is_black} = game.ref(move_count)
     const {suggest} = game.ref(move_count - 1)
     const sw = ((suggest || []).find(h => h.move === move && h.visits > 0) || {}).winrate

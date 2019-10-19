@@ -11,7 +11,7 @@ import { board_size, idx2move, move2idx } from "./coord"
 // drawer
 import * as D from "./draw"
 import { aa_ref, clip, Coordinate, deferred_procs, do_nothing, each_key_value, empty, endstate_diff_tag_letter, identity, mac_p, merge, seq, start_moves_tag_letter, tag_letters, to_f, to_i, truep } from "./util"
-import { IStone } from "./game";
+import { IStone, ISuggest } from "./game";
 
 //const current_window = getCurrentWindow()
 
@@ -21,7 +21,49 @@ const winrate_bar_canvas = Q('#winrate_bar'), winrate_graph_canvas = Q('#winrate
 export const graph_overlay_canvas = Q('#graph_overlay')
 
 // renderer state
-const R = {
+export interface IRendererState {
+    stones: IStone[][];
+    move_count: number;
+    bturn: boolean;
+    history_length: number;
+    suggest: ISuggest[];
+    visits: number;
+    visits_per_sec: number;
+    winrate_history: any[];
+    previous_suggest: any;
+    attached: boolean;
+    pausing: boolean;
+    auto_analyzing: boolean;
+    winrate_trail: boolean;
+    expand_winrate_bar: boolean;
+    let_me_think: boolean;
+    score_bar: boolean;
+    max_visits: number;
+    board_type: string;
+    previous_board_type: string;
+    progress: number;
+    progress_bturn: boolean;
+    weight_info: string;
+    is_katago: boolean;
+    sequence_cursor: number;
+    sequence_length: number;
+    sequence_ids: any[];
+    history_tags: any[];
+    endstate_clusters: any[];
+    prev_endstate_clusters: any;
+    lizzie_style: boolean;
+    window_id: number;
+    show_endstate: any;
+    player_black: string;
+    player_white: string;
+    endstate_diff_interval: any;
+    trial: any;
+    endstate_sum?: number;
+    score_without_komi?: number;
+    busy?: boolean;
+}
+
+export const R: IRendererState = {
     stones: [] as IStone[][], move_count: 0, bturn: true, history_length: 0, suggest: [], visits: 1,
     visits_per_sec: 0,
     winrate_history: [], previous_suggest: null,
@@ -41,7 +83,7 @@ const R = {
     trial: null,
 }
 let temporary_board_type = null, the_first_board_canvas = null
-let keyboard_moves = [], keyboard_tag_move_count = null
+let keyboard_moves: string[] = [], keyboard_tag_move_count = null
 let hovered_move = null, hovered_move_count = null, hovered_board_canvas = null
 let the_showing_movenum_p = false, the_showing_endstate_value_p = false
 let thumbnails = []
@@ -90,7 +132,7 @@ function hide_dialog() {
     document.querySelectorAll(".dialog").forEach(d => (d as HTMLElement).style.visibility = "hidden")
 }
 
-function play_moves(moves) {
+function play_moves(moves: string[]) {
     moves && moves.forEach((move, k) => main('play', move, false,
                                              (k === 0) && start_moves_tag_letter))
 }

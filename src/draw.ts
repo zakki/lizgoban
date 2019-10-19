@@ -4,8 +4,9 @@
 // setup
 
 import { board_size, idx2coord_translator_pair, idx2move, move2idx, uv2coord_translator_pair } from "./coord"
-import { graph_overlay_canvas } from "./renderer"
+import { graph_overlay_canvas, IRendererState } from "./renderer"
 import { around_idx_diff, clip, Coordinate, each_key_value, empty, flatten, identity, last, merge, num_sort, seq, to_i, to_s, truep, xor } from "./util"
+import { ISuggest } from "./game"
 
 
 // color constant
@@ -27,9 +28,9 @@ const EXPECTED_COLOR = 'rgba(0,0,255,0.3)', UNEXPECTED_COLOR = 'rgba(255,0,0,0.8
 const GOBAN_BG_COLOR = {"": "#f9ca91", p: "#a38360", t: "#f7e3cd", pt: "#a09588"}
 
 // state
-let R: any = {}
+let R: IRendererState = {} as IRendererState;
 export let target_move = null
-export function set_state(given_R) {R = given_R}  // fixme: ugly
+export function set_state(given_R: IRendererState) {R = given_R}  // fixme: ugly
 
 // util
 function f2s(z: number, digits?: number) {return truep(z) ? z.toFixed(truep(digits) ? digits : 1) : ''}
@@ -402,7 +403,7 @@ function draw_suggestion_order(h, [x, y], radius, color, large_font_p, g) {
     const either_champ = (h.data.order * h.data.winrate_order === 0)
     const huge = [2, -1], large = [1.5, -0.5], normal = [1, -0.1], small = [0.8, 0.3]
     const font_modifier = large_font_p && both_champ ? 'bold ' : ''
-    const either = (champ, other) => both_champ ? champ : other
+    const either = (champ: number[], other: number[]) => both_champ ? champ : other
     const [fontsize, d] = (lizzie ? small : large_font_p ? huge : either(large, normal))
           .map(c => c * radius)
     const w = fontsize
@@ -522,7 +523,7 @@ function mapping_line_coords(b_winrate, unit, canvas) {
 
 let winrate_bar_prev = 50
 
-export function draw_winrate_bar(canvas, large_bar, pale_text_p) {
+export function draw_winrate_bar(canvas: HTMLCanvasElement, large_bar, pale_text_p) {
     const w = canvas.width, h = canvas.height, g = canvas.getContext("2d")
     const score_p = score_bar_p(), tics = score_p ? 19 : 9
     const xfor = percent => w * percent / 100
@@ -629,7 +630,7 @@ function draw_winrate_bar_last_move_eval(b_wr, prev_score, h, xfor, vline, g) {
 
 // draw
 
-function draw_winrate_bar_suggestions(w, h, xfor, vline, large_bar, g) {
+function draw_winrate_bar_suggestions(w, h, xfor, vline, large_bar: boolean, g: CanvasRenderingContext2D) {
     g.lineWidth = 1
     const max_radius = Math.min(h, w * 0.05)
     const prev_color = 'rgba(64,128,255,0.8)'
@@ -649,8 +650,8 @@ function draw_winrate_bar_suggestions(w, h, xfor, vline, large_bar, g) {
                              false, large_bar, g)
 }
 
-function draw_winrate_bar_fan(s, w, h, stroke, fill, aura_color,
-                              force_puct_p, large_bar, g) {
+function draw_winrate_bar_fan(s, w, h, stroke: string, fill: string, aura_color,
+                              force_puct_p: boolean, large_bar: boolean, g: CanvasRenderingContext2D) {
     const bturn = s.bturn === undefined ? R.bturn : s.bturn
     const plot_params = winrate_bar_xy(s, w, h, true, bturn)
     const [x, y, r, max_radius, x_puct, y_puct] = plot_params
@@ -668,7 +669,7 @@ function draw_winrate_bar_fan(s, w, h, stroke, fill, aura_color,
 
 function draw_with_aura(proc,
                         s, h, [x, y, r, max_radius, x_puct, y_puct, x_lcb]: number[],
-                        aura_color, force_puct_p, g) {
+                        aura_color: string, force_puct_p: boolean, g: CanvasRenderingContext2D) {
     if (!aura_color) {proc(); return}
     const searched = winrate_trail_searched(s), rel_dy = (y - y_puct) / h
     const draw_puct_p = force_puct_p || s.visits_order === 0 ||
@@ -687,7 +688,7 @@ function draw_with_aura(proc,
     draw_lcb_p && line([x, y], [x_lcb, y], g)
 }
 
-function draw_winrate_bar_order(s, w, h, g) {
+function draw_winrate_bar_order(s, w, h, g: CanvasRenderingContext2D) {
     const fontsize = w * 0.03, [x, y] = winrate_bar_xy(s, w, h)
     g.save()
     winrate_bar_order_set_style(s, fontsize, g)
@@ -907,7 +908,7 @@ function draw_winrate_graph_future(w, h, sr2coord, g) {
     paint(0.5, alpha, 0, 0, y); paint(1, alpha, alpha, y, h)
 }
 
-function draw_winrate_graph_curve(sr2coord, g) {
+function draw_winrate_graph_curve(sr2coord, g: CanvasRenderingContext2D) {
     let prev = null, cur = null
     const draw_predict = (r, s, p) => {
         g.strokeStyle = YELLOW; g.lineWidth = 1; line(sr2coord(s, r), sr2coord(s, p), g)
@@ -922,7 +923,7 @@ function draw_winrate_graph_curve(sr2coord, g) {
     })
 }
 
-function draw_winrate_graph_tag(fontsize, sr2coord, g) {
+function draw_winrate_graph_tag(fontsize, sr2coord, g: CanvasRenderingContext2D) {
     R.winrate_history.forEach((h, s) => {
         if (!h.tag) {return}
         const [x, ymax] = sr2coord(s, 0)
@@ -937,7 +938,7 @@ function draw_winrate_graph_tag(fontsize, sr2coord, g) {
 
 // additional plots
 
-function draw_winrate_graph_score(sr2coord, g) {
+function draw_winrate_graph_score(sr2coord, g: CanvasRenderingContext2D) {
     const scores = winrate_history_values_of('score_without_komi')
     const max_score = Math.max(...scores.filter(truep).map(Math.abs))
     const scale = max_score < 45 ? 1 : max_score < 95 ? 0.5 : 0.2
@@ -951,11 +952,11 @@ function draw_winrate_graph_score(sr2coord, g) {
     draw_winrate_graph_history(scores, to_r, plotter, sr2coord, g)
 }
 
-function draw_winrate_graph_hotness(h, sr2coord, g) {
+function draw_winrate_graph_hotness(h, sr2coord, g: CanvasRenderingContext2D) {
     draw_winrate_graph_barchart('hotness', 0.33, '0,255,255', true, h, sr2coord, g)
 }
 
-function draw_winrate_graph_uncertainty(h, sr2coord, g) {
+function draw_winrate_graph_uncertainty(h, sr2coord, g: CanvasRenderingContext2D) {
     draw_winrate_graph_barchart('uncertainty', 10, '255,128,0', false, h, sr2coord, g)
 }
 
@@ -964,7 +965,7 @@ function draw_winrate_graph_history(ary, to_r, plotter, sr2coord, g) {
     ary.forEach(f)
 }
 
-function draw_winrate_graph_barchart(key, mag, rgb, upside_down, h, sr2coord, g) {
+function draw_winrate_graph_barchart(key, mag, rgb, upside_down, h, sr2coord, g: CanvasRenderingContext2D) {
     const values = winrate_history_values_of(key)
     const conv = upside_down ? (val => 100 - val) : identity
     const to_r = val => conv(clip(val * mag, 0, 100))
@@ -1004,7 +1005,7 @@ export function update_winrate_trail() {
     })
 }
 
-function thin_winrate_trail(trail) {
+function thin_winrate_trail(trail: number[]) {
     const len = trail.length
     if (len <= winrate_trail_max_length) {return}
     const distance = (k1, k2) => {
@@ -1020,7 +1021,7 @@ function thin_winrate_trail(trail) {
     victim >= 0 && trail.splice(victim, 1)
 }
 
-function draw_winrate_trail(canvas) {
+function draw_winrate_trail(canvas: HTMLCanvasElement) {
     const w = canvas.width, h = canvas.height, g = canvas.getContext("2d")
     const xy_for = s => winrate_bar_xy(s, w, h)
     const limit_visits = R.max_visits * winrate_trail_limit_relative_visits
@@ -1033,14 +1034,14 @@ function draw_winrate_trail(canvas) {
     })
 }
 
-function winrate_trail_rising(suggest) {
+function winrate_trail_rising(suggest: ISuggest) {
     const unit = 0.005, max_delta = 5, a = winrate_trail[suggest.move] || []
     const delta = clip(a.length - 1, 0, max_delta)
     return (delta < 1) ? 0 :
         clip((a[0].relative_visits - a[delta].relative_visits) / (delta * unit), -1, 1)
 }
 
-function winrate_trail_searched(suggest) {
+function winrate_trail_searched(suggest: ISuggest) {
     // suggest.searched > 1 can happen for some reason
     return clip(suggest.searched || 0, 0, 1)
 }
@@ -1048,7 +1049,7 @@ function winrate_trail_searched(suggest) {
 /////////////////////////////////////////////////
 // visits trail
 
-export function draw_visits_trail(canvas) {
+export function draw_visits_trail(canvas: HTMLCanvasElement) {
     const w = canvas.width, h = canvas.height, g = canvas.getContext("2d")
     const fontsize = h / 10, top_margin = 3
     const v2x = v => v / R.visits * w
@@ -1061,7 +1062,7 @@ export function draw_visits_trail(canvas) {
     R.suggest.forEach(s => draw_visits_trail_curve(s, fontsize, h, xy_for, g))
 }
 
-function draw_visits_trail_grid(fontsize, w, h, v2x, v2y, g) {
+function draw_visits_trail_grid(fontsize, w, h, v2x, v2y, g: CanvasRenderingContext2D) {
     const kilo = (v, x, y) => g.fillText(' ' + kilo_str(v).replace('.0', ''), x, y)
     g.save()
     g.lineWidth = 1; set_font(fontsize, g)
@@ -1077,7 +1078,7 @@ function draw_visits_trail_grid(fontsize, w, h, v2x, v2y, g) {
     g.restore()
 }
 
-function draw_visits_trail_curve(s, fontsize, h, xy_for, g) {
+function draw_visits_trail_curve(s, fontsize, h, xy_for, g: CanvasRenderingContext2D) {
     const {move} = s, a = winrate_trail[move]
     if (!a) {return}
     const {alpha, target_p, draw_order_p, next_p} = winrate_bar_suggest_prop(s)
@@ -1092,7 +1093,7 @@ function draw_visits_trail_curve(s, fontsize, h, xy_for, g) {
     draw_order_p && draw_visits_trail_order(s, a, target_p, fontsize, h, xy_for, g)
 }
 
-function draw_visits_trail_order(s, a, forcep, fontsize, h, xy_for, g) {
+function draw_visits_trail_order(s, a, forcep, fontsize, h, xy_for, g: CanvasRenderingContext2D) {
     const [x, y] = xy_for(a[0]), low = y > 0.8 * h, ord = s.order + 1
     if (low && !forcep) {return}
     g.save()
@@ -1120,18 +1121,28 @@ function drawers_trio(gen) {
 function line_gen(...args) {
     // usage: line([x0, y0], [x1, y1], ..., [xn, yn], g)
     const g = args.pop(), [[x0, y0], ...xys] = args
-    g.beginPath(); g.moveTo(x0, y0); xys.forEach(xy => g.lineTo(...xy))
+    g.beginPath()
+    g.moveTo(x0, y0)
+    xys.forEach(xy => g.lineTo(...xy))
 }
-function rect_gen([x0, y0], [x1, y1], g) {g.beginPath(); g.rect(x0, y0, x1 - x0, y1 - y0)}
-function circle_gen([x, y], r, g) {g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI)}
-function fan_gen([x, y], r, [deg1, deg2], g) {
-    g.beginPath(); g.moveTo(x, y)
-    g.arc(x, y, r, deg1 * Math.PI / 180, deg2 * Math.PI / 180); g.closePath()
+function rect_gen([x0, y0], [x1, y1], g: CanvasRenderingContext2D) {
+    g.beginPath()
+    g.rect(x0, y0, x1 - x0, y1 - y0)
+}
+function circle_gen([x, y], r, g: CanvasRenderingContext2D) {
+    g.beginPath()
+    g.arc(x, y, r, 0, 2 * Math.PI)
+}
+function fan_gen([x, y], r, [deg1, deg2], g: CanvasRenderingContext2D) {
+    g.beginPath()
+    g.moveTo(x, y)
+    g.arc(x, y, r, deg1 * Math.PI / 180, deg2 * Math.PI / 180)
+    g.closePath()
 }
 function square_around_gen([x, y], radius, g) {
     rect_gen([x - radius, y - radius], [x + radius, y + radius], g)
 }
-function triangle_around_gen([x, y], half_width, g) {
+function triangle_around_gen([x, y], half_width, g: CanvasRenderingContext2D) {
     // u = (height / 3 of regular triangle)
     const u = half_width / Math.sqrt(3), top = y - u * 2, bottom = y + u
     line_gen([x, top], [x - half_width, bottom], [x + half_width, bottom], g)
@@ -1147,20 +1158,20 @@ const [square_around, fill_square_around, edged_fill_square_around] =
 const [triangle_around, fill_triangle_around, edged_fill_triangle_around] =
       drawers_trio(triangle_around_gen)
 
-function x_shape_around([x, y], radius, g) {
+function x_shape_around([x, y], radius, g: CanvasRenderingContext2D) {
     line([x - radius, y - radius], [x + radius, y + radius], g)
     line([x - radius, y + radius], [x + radius, y - radius], g)
 }
 
-function set_font(fontsize, g) {g.font = '' + fontsize + 'px sans-serif'}
+function set_font(fontsize: number | string, g: CanvasRenderingContext2D) {g.font = '' + fontsize + 'px sans-serif'}
 
-function side_gradation(x0, x1, color0, color1, g) {
+function side_gradation(x0: number, x1: number, color0: string, color1: string, g: CanvasRenderingContext2D) {
     const grad = g.createLinearGradient(x0, 0, x1, 0)
     grad.addColorStop(0, color0); grad.addColorStop(1, color1)
     return grad
 }
 
-function hsla(h, s, l, alpha) {
+function hsla(h: number, s: number, l: number, alpha: number) {
     return 'hsla(' + h + ',' + s + '%,' + l + '%,' + (alpha === undefined ? 1 : alpha) + ')'
 }
 
