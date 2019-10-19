@@ -282,8 +282,9 @@ const api = merge({}, simple_api, {
     //paste_sgf_from_clipboard, open_sgf, save_sgf,
     next_sequence, previous_sequence, nth_sequence, cut_sequence, duplicate_sequence,
     //help,
+	new_empty_board, new_handicap_board,
     // for debug
-    send_to_leelaz: P.send_to_leelaz,
+    //send_to_leelaz: P.send_to_leelaz,
 })
 
 function api_handler(channel, handler, busy = false) {
@@ -699,6 +700,13 @@ function add_handicap_stones(k) {
     const moves = pos.slice(0, k)
     exceptions.includes(k) && (moves[k - 1] = center)
     moves.forEach(m => do_play(m, true))
+}
+function new_handicap_board(k) {
+    k = k | 0
+    if (k < 2 || k > 9)
+	 return
+    game.is_empty() || new_empty_board()
+	add_handicap_stones(k)
 }
 /*
 function ask_handicap_stones() {

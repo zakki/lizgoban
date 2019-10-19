@@ -116,7 +116,7 @@ function suggest_handler(h) {
     const considerable = z => z.visits > 0 || z.prior >= too_small_prior
     const mc = game.move_count, cur = game.ref(mc) || {}
     h.suggest = h.suggest.filter(considerable)
-    R.show_endstate && h.ownership &&
+    /*R.show_endstate &&*/ h.ownership &&
         ((cur.endstate = h.endstate = endstate_from_ownership(h.ownership)),
          (cur.hotness = sum_of_endstate_change(game.move_count)),
          (cur.score_without_komi = h.score_without_komi),

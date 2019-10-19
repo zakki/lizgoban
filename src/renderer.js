@@ -32,7 +32,6 @@ const R = {
     history_tags: [], endstate_clusters: [], prev_endstate_clusters: null,
     lizzie_style: false,
     window_id: -1,
-
     show_endstate: null,
     player_black: null,
     player_white: null,
@@ -101,7 +100,42 @@ window["main"] = main
 function toggele_lizzie_style() {
     R.lizzie_style = !R.lizzie_style;
 }
-window["toggele_lizzie_style"] = toggele_lizzie_style;
+window["toggele_lizzie_style"] = toggele_lizzie_style
+
+function toggle_expand_winrate_bar() {
+    R.expand_winrate_bar = !R.expand_winrate_bar
+	update()
+}
+window['toggle_expand_winrate_bar'] = toggle_expand_winrate_bar
+
+function toggle_show_endstate() {
+    R.show_endstate = !R.show_endstate
+}
+window['toggle_show_endstate'] = toggle_show_endstate
+
+function toggle_score_bar() {
+    R.score_bar = !R.score_bar
+}
+window['toggle_score_bar'] = toggle_score_bar
+
+function new_empty_board() {
+    main('new_empty_board')
+}
+window['new_empty_board'] = new_empty_board
+
+function ask_handicap_stones() {
+    let s = window.prompt("Handicap stones", "2")
+	let k = Number.parseInt(s)
+	if (!k) return
+	if (k < 2 || k > 9)
+	    alert("Unsupported handicap stone")
+    main('new_handicap_board', k)
+}
+window['ask_handicap_stones'] = ask_handicap_stones
+
+function save_sgf_file() {
+}
+window['save_sgf_file'] = save_sgf_file
 
 /////////////////////////////////////////////////
 // from main
@@ -273,6 +307,7 @@ function set_temporary_board_type(btype, btype2) {
 }
 
 function toggle_board_type(type) {main('toggle_board_type', R.window_id, type)}
+window["toggle_board_type"] = toggle_board_type;
 
 function double_boards_p() {return R.board_type.match(/^double_boards/)}
 
@@ -695,6 +730,9 @@ function drag_and_drop_handler(func) {
 
 window.ondragover = drag_and_drop_handler(dt => {dt.dropEffect = "copy"})
 window.ondrop = drag_and_drop_handler(dt => each_value(dt.files, read_sgf_file))
+
+Q('#sgffile').onchange = e => read_sgf_file(e.target.files[0])
+
 
 /////////////////////////////////////////////////
 // controller

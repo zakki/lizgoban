@@ -1,7 +1,5 @@
 // -*- coding: utf-8 -*-
 
-//import * as io from 'socket.io-client';
-
 export function setTitle(title) {
     document.title = title;
 }
