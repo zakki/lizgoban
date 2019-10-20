@@ -16,9 +16,11 @@ import { IStone, ISuggest } from "./game";
 //const current_window = getCurrentWindow()
 
 // canvas
-const main_canvas = Q('#goban'), sub_canvas = Q('#sub_goban')
-const winrate_bar_canvas = Q('#winrate_bar'), winrate_graph_canvas = Q('#winrate_graph')
-export const graph_overlay_canvas = Q('#graph_overlay')
+const main_canvas = Q('#goban') as HTMLCanvasElement
+const sub_canvas = Q('#sub_goban') as HTMLCanvasElement
+const winrate_bar_canvas = Q('#winrate_bar') as HTMLCanvasElement
+const winrate_graph_canvas = Q('#winrate_graph') as HTMLCanvasElement
+export const graph_overlay_canvas = Q('#graph_overlay') as HTMLCanvasElement
 
 // renderer state
 export interface IRendererState {
@@ -260,14 +262,14 @@ const draw_es_gen = options => with_opts(D.draw_endstate_goban, options)
 const draw_current_endstate_value = draw_es_gen({draw_endstate_value_p: true})
 const draw_past_endstate_value = draw_es_gen({draw_endstate_value_p: 'past'})
 
-function draw_wr_graph(canvas) {
+function draw_wr_graph(canvas: HTMLCanvasElement) {
     const endstate_at = showing_endstate_value_p() && R.prev_endstate_clusters &&
           (R.move_count - R.endstate_diff_interval)
     const until = showing_until() || endstate_at
     D.draw_winrate_graph(canvas, until, handle_mouse_on_winrate_graph)
 }
 
-function draw_wr_bar(canvas) {
+function draw_wr_bar(canvas: HTMLCanvasElement) {
     const wr_only = (current_board_type() === 'winrate_only')
     const large_bar = R.expand_winrate_bar || wr_only
     D.draw_winrate_bar(canvas, large_bar, wr_only)
@@ -628,7 +630,7 @@ function set_overlay(canvas, orig) {
 }
 
 function portrait_p() {
-    const [my, sy] = [main_canvas, sub_canvas].map(c => c.getBoundingClientRect().y)
+    const [my, sy] = [main_canvas, sub_canvas].map(c => c.getBoundingClientRect().top)
     return my < sy
 }
 
