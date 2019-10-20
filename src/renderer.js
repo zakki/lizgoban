@@ -317,17 +317,42 @@ function double_boards_p() {return R.board_type.match(/^double_boards/)}
 // on goban
 
 function handle_mouse_on_goban(canvas, coord2idx, read_only, tag_clickable_p) {
-    const onmousedown = e =>
+    let startx = 0, starty = 0
+    let lastx = 0, lasty = 0
+    const onmousedown = e => {
         (!read_only && !R.attached &&
          (play_here(e, coord2idx, tag_clickable_p), hover_off(canvas)))
+        }
+    const onclick = onmousedown
     const onmousemove = e => hover_here(e, coord2idx, canvas)
     const onmouseenter = onmousemove
     const onmouseleave = e => hover_off(canvas)
-    const handlers = {onmousedown, onmousemove, onmouseenter, onmouseleave}
+    const ontouchstart = e => {
+        lastx = startx = e.touches[0].clientX
+        lasty = starty = e.touches[0].clientY
+    }
+    const ontouchmove = e => {
+        lastx = e.touches[0].clientX
+        lasty = e.touches[0].clientY
+        onmousemove(e)
+    }
+    const ontouchend = e => {
+        const dx = Math.abs(startx - lastx)
+        const dy = Math.abs(starty - lasty)
+        const len = Math.sqrt(dx * dx + dy * dy)
+        if (len < 5) {
+            // triger click
+        } else {
+            e.preventDefault()
+        }
+    }
+    const handlers = {onmousedown, onmousemove, onmouseenter, onmouseleave,
+        onclick, ontouchstart, ontouchmove, ontouchend}
     add_mouse_handlers_with_record(canvas, handlers)
 }
 function ignore_mouse_on_goban(canvas) {
-    const ks = ['onmousedown', 'onmousemove', 'onmouseenter', 'onmouseleave']
+    const ks = ['onmousedown', 'onmousemove', 'onmouseenter', 'onmouseleave',
+        'ontouchstart', 'ontouchmove', 'ontouchend']
     ks.forEach(k => canvas[k] = do_nothing)
 }
 
@@ -388,9 +413,20 @@ function hover_on_graph(e, coord2sr, canvas) {
 function add_mouse_handlers_with_record(canvas, handlers, hover_updater) {
     const with_record_gen = bool => f =>
           e => (f(e), (canvas.lizgoban_last_mouse_move_event = bool && e))
-    const with_record = with_record_gen(true), with_unrecord = with_record_gen(false)
+    const with_record = with_record_gen(true)
+    const with_unrecord = with_record_gen(false)
     const with_it = {onmousemove: with_record, onmouseleave: with_unrecord}
-    each_key_value(handlers, (k, f) => (canvas[k] = (with_it[k] || identity)(f)))
+    each_key_value(handlers, (k, f) => {
+        if (k.startsWith('ontouch')) {
+            const ff = (with_it[k] || identity)(f)
+            const name = k.substring(2)
+            canvas.removeEventListener(name, canvas["_" + k])
+            canvas.addEventListener(name, ff)
+            canvas["_" + k] = ff
+        } else {
+            canvas[k] = (with_it[k] || identity)(f)
+        }
+    })
     canvas.lizgoban_hover_updater = hover_updater || canvas.onmousemove
 }
 function update_hover_maybe() {
@@ -431,7 +467,10 @@ function latest_move_count_for_idx(idx, tagged_stone_only) {
 
 function mouse2coord(e) {
     const bbox = e.target.getBoundingClientRect()
-    return [e.clientX - bbox.left, e.clientY - bbox.top]
+    if (e instanceof MouseEvent)
+        return [e.clientX - bbox.left, e.clientY - bbox.top]
+    if (e instanceof TouchEvent)
+        return [e.touches[0].clientX - bbox.left, e.touches[0].clientY - bbox.top]
 }
 function mouse2idx(e, coord2idx) {
     const [i, j] = coord2idx(...mouse2coord(e))
