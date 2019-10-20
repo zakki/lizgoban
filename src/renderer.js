@@ -585,7 +585,7 @@ function set_overlay(canvas, orig) {
 }
 
 function portrait_p() {
-    const [my, sy] = [main_canvas, sub_canvas].map(c => c.getBoundingClientRect().y)
+    const [my, sy] = [main_canvas, sub_canvas].map(c => c.getBoundingClientRect().top)
     return my < sy
 }
 
