@@ -274,6 +274,8 @@ const api = merge({}, simple_api, {
     goto_move_count, toggle_auto_analyze, play_best, play_weak, auto_play, stop_auto,
     //paste_sgf_from_clipboard, open_sgf, save_sgf,
     next_sequence, previous_sequence, nth_sequence, cut_sequence, duplicate_sequence,
+	uncut_sequence,
+	toggle_trial, tag_or_untag,
     //help,
 	new_empty_board, new_handicap_board,
     // for debug
@@ -395,7 +397,9 @@ stop_auto_analyze()
 
 // auto-play (auto-replay (redo) or self-play (play_best) in every XX seconds)
 let last_auto_play_time = 0
-function auto_play(sec, explicitly_playing_best) {
+function auto_play(sec, explicitly_playing_best, new_auto_replaying) {
+	if (new_auto_replaying !== undefined)
+		auto_replaying = new_auto_replaying
     explicitly_playing_best ? (auto_replaying = false) : (auto_play_count = Infinity)
     auto_replaying && rewind_maybe()
     auto_play_sec = sec || -1; stop_auto_analyze()
@@ -418,9 +422,9 @@ function auto_play_progress() {
     return auto_playing(true) ?
         (Date.now() - last_auto_play_time) / (auto_play_sec * 1000) : -1
 }
-function ask_auto_play_sec(win, replaying) {
-    auto_replaying = replaying; win.webContents.send('ask_auto_play_sec')
-}
+// function ask_auto_play_sec(win, replaying) {
+//     auto_replaying = replaying; win.webContents.send('ask_auto_play_sec')
+// }
 function increment_auto_play_count(n) {
     auto_playing(true) && stop_auto_play()
     auto_play_count += (n || 1)  // It is Infinity after all if n === Infinity

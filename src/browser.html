@@ -183,15 +183,11 @@
 	  <hr>
       -->
 	  <a href="javascript:main('cut_sequence')">Delete board</a>
-	  <!--
-	  <a href="javascript:menu_exist_deleted_sequence() && uncut_sequence()">Undelete board</a>
-      -->
+	  <a href="javascript:main('uncut_sequence')">Undelete board</a>
 	  <a href="javascript:main('duplicate_sequence', false, true)">Duplicate board</a>
 	  <a href="javascript:main('duplicate_sequence', true, true)">Duplicate until current move</a>
-	  <!--
 	  <hr>
-	  <a href="javascript:menu_toggle_trial()">Trial board</a>
-      -->
+	  <a href="javascript:main('toggle_trial')">Trial board</a>
     </div>
   </li>
   <li class="dropdown">
@@ -221,13 +217,13 @@
 	  -->
     </div>
   </li>
-  <!--
   <li class="dropdown">
     <a href="javascript:void(0)" class="dropbtn">Tool</a>
     <div class="dropdown-content">
-      <a href="javascript:menu_ask_sec(true)">Auto replay</a>
-      <a href="javascript:menu_ask_sec(false)">Self play</a>
+      <a href="javascript:ask_auto_play_sec(true)">Auto replay</a>
+      <a href="javascript:ask_auto_play_sec(false)">Self play</a>
       <a href="javascript:menu_skip_auto()">...Skip to next</a>
+      <!--
       <hr>
       <a href="javascript:menu_">{label: 'Alternative weights for white', accelerator: 'CmdOrCtrl+Shift+L',
          type: 'checkbox', checked: lz_white,
@@ -241,13 +237,10 @@
         sep,
         ...insert_if(P.support_komi_p(),
       <a href="javascript:menu_ask_engine_komi()">Komi (${P.get_engine_komi()})</a>
-	  <a href="javascript:menu_tag_or_untag()">Tag / Untag</a>
-	  <a href="javascript:menu_">has_sabaki && {label: 'Attach Sabaki', type: 'checkbox', checked: attached,
-        accelerator: 'CmdOrCtrl+T', click: toggle_sabaki},</a>
-	  <a href="javascript:menu_">item('Info', 'CmdOrCtrl+I', info),</a>
+      -->
+	    <a href="javascript:main('tag_or_untag')">Tag / Untag</a>
     </div>
   </li>
-  -->
   <li class="dropdown">
     <a href="javascript:void(0)" class="dropbtn">Help</a>
     <div class="dropdown-content">

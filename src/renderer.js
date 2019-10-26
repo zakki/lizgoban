@@ -76,7 +76,7 @@ function auto_analysis_visits_setting () {
 }
 
 function start_auto_play() {
-    main('auto_play', to_f(Q('#auto_play_sec').value)); hide_dialog()
+    main('auto_play', to_f(Q('#auto_play_sec').value), null, auto_replaying); hide_dialog()
 }
 window["start_auto_play"] = start_auto_play;
 
@@ -135,6 +135,13 @@ window['ask_handicap_stones'] = ask_handicap_stones
 function save_sgf_file() {
 }
 window['save_sgf_file'] = save_sgf_file
+
+let auto_replaying = false
+function ask_auto_play_sec(replaying) {
+	auto_replaying = replaying
+	show_dialog('#auto_play_sec_dialog')
+}
+window['ask_auto_play_sec'] = ask_auto_play_sec;
 
 /////////////////////////////////////////////////
 // from main
