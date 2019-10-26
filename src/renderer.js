@@ -5,7 +5,6 @@
 
 // util
 function Q(x) {return document.querySelector(x)}
-//const electron = require('electron'), ipc = electron.ipcRenderer
 import { setTitle, ipc } from "./client-electron";
 import { board_size, idx2move, move2idx } from "./coord"
 // drawer
