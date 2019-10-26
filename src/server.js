@@ -85,10 +85,8 @@ let pausing = false, busy = false
 // (cf.) "set_renderer_state" in powered_goban.js
 // (cf.) "the_endstate_handler" and "the_suggest_handler" in engine.js
 const stored_keys_for_renderer =
-    ['lizzie_style', 'expand_winrate_bar', 'score_bar',
-        'let_me_think', 'show_endstate']
+    ['let_me_think', 'show_endstate']
 const R = {stones: game.current_stones(), bturn: true, suggest: null,
-    lizzie_style: null, expand_winrate_bar: null, score_bar: null,
     let_me_think: null, show_endstate: null,
     ...renderer_preferences()}
 P.initialize(R, { on_change: update_let_me_think, on_suggest: try_auto }, {
