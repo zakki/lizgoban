@@ -547,7 +547,7 @@ export function draw_winrate_bar(canvas, large_bar, pale_text_p) {
 function draw_winrate_bar_text(prev_score, w, h, pale_text_p, g) {
     const b_wr = b_winrate(); if (!truep(b_wr)) {return}
     const scorep = score_bar_p()
-    const eval = scorep ? - (R.score_without_komi - prev_score) * (R.bturn ? 1 : -1)
+    const eval_ = scorep ? - (R.score_without_komi - prev_score) * (R.bturn ? 1 : -1)
           : last_move_eval()
     const visits = R.max_visits && kilo_str(R.max_visits)
     const fontsize = Math.min(h * 0.5, w * 0.04)
@@ -561,7 +561,7 @@ function draw_winrate_bar_text(prev_score, w, h, pale_text_p, g) {
     const f = (wr_text, x, align, myturn) => {
         const cond = (pred, s) => (pred ? ` ${s} ` : '')
         const vis = cond(visits, visits)
-        const ev = cond(truep(eval), `(${eval > 0 ? '+' : ''}${f2s(eval)})`)
+        const ev = cond(truep(eval_), `(${eval_ > 0 ? '+' : ''}${f2s(eval_)})`)
         const win = cond(true, wr_text)
         g.textAlign = align; g.fillStyle = wr_color; write(win, x)
         myturn && (g.fillStyle = vis_color); write(myturn ? vis : ev, x, 1.5)
@@ -609,8 +609,8 @@ function draw_winrate_bar_tics(b_wr, tics, vline, g) {
 }
 
 function draw_winrate_bar_last_move_eval(b_wr, prev_score, h, xfor, vline, g) {
-    const eval = last_move_eval(), b_eval = last_move_b_eval(), dummy = 0
-    if (!truep(eval)) {return}
+    const eval_ = last_move_eval(), b_eval = last_move_b_eval(), dummy = 0
+    if (!truep(eval_)) {return}
     const prev_b_wr = score_bar_p() ?
           fake_winrate_for(dummy, prev_score, true) : (b_wr - b_eval)
     const [x1, x2] = [b_wr, prev_b_wr].map(xfor).sort()
