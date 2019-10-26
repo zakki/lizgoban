@@ -51,6 +51,7 @@ function parse_option(cur, succ) {
         case '-j': merge_json(succ); break
         case '-c': merge_json(fs.readFileSync(succ)); break
     }
+    kill_all_leelaz()
 }
 
 /////////////////////////////////////////////////
