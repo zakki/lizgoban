@@ -8,9 +8,6 @@ const port = process.env.PORT || 3000
 exapp.use(express.static('public'))
 
 io.on('connection', function (socket) {
-    socket.on('chat message', function (msg) {
-        io.emit('chat message', msg)
-    });
     new_window(socket, 'double_boards')
 });
 
